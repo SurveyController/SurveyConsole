@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/SurveyController/SurveyController-Go/internal/models"
-	"github.com/SurveyController/SurveyController-Go/internal/network/proxy"
+	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/network/proxy"
 )
 
 // StatusEvent represents a status update from the engine.

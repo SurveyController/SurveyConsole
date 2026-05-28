@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SurveyController/SurveyController-Go/internal/engine"
+	"github.com/SurveyController/SurveyConsole/internal/engine"
 )
 
 func TestSchedulerConcurrency(t *testing.T) {

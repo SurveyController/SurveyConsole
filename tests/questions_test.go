@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/SurveyController/SurveyController-Go/internal/questions"
+	"github.com/SurveyController/SurveyConsole/internal/questions"
 )
 
 func TestWeightedIndex(t *testing.T) {

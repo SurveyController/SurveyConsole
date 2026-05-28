@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/SurveyController/SurveyController-Go/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
 func TestRuntimeConfigSerialization(t *testing.T) {

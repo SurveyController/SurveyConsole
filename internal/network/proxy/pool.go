@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SurveyController/SurveyController-Go/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
 // Pool manages a pool of proxy leases.

@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/SurveyController/SurveyController-Go/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
 // AnswerAction represents a single answer to be submitted.

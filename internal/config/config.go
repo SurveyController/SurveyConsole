@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/SurveyController/SurveyController-Go/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
 // LoadFile loads a RuntimeConfig from a JSON file.

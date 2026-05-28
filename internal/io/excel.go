@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/xuri/excelize/v2"
-	"github.com/SurveyController/SurveyController-Go/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
 // ExportRunReport exports a run report to an Excel file.

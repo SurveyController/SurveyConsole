@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/SurveyController/SurveyController-Go/internal/models"
-	"github.com/SurveyController/SurveyController-Go/internal/providers/credamo"
-	"github.com/SurveyController/SurveyController-Go/internal/providers/tencent"
-	"github.com/SurveyController/SurveyController-Go/internal/providers/wjx"
+	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/providers/credamo"
+	"github.com/SurveyController/SurveyConsole/internal/providers/tencent"
+	"github.com/SurveyController/SurveyConsole/internal/providers/wjx"
 )
 
 // Registry manages the mapping of provider names to adapters.

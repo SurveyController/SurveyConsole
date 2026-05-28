@@ -8,13 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/SurveyController/SurveyController-Go/internal/config"
-	"github.com/SurveyController/SurveyController-Go/internal/engine"
-	surveyio "github.com/SurveyController/SurveyController-Go/internal/io"
-	"github.com/SurveyController/SurveyController-Go/internal/logging"
-	"github.com/SurveyController/SurveyController-Go/internal/models"
-	"github.com/SurveyController/SurveyController-Go/internal/network/proxy"
-	"github.com/SurveyController/SurveyController-Go/internal/providers"
+	"github.com/SurveyController/SurveyConsole/internal/config"
+	"github.com/SurveyController/SurveyConsole/internal/engine"
+	surveyio "github.com/SurveyController/SurveyConsole/internal/io"
+	"github.com/SurveyController/SurveyConsole/internal/logging"
+	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/network/proxy"
+	"github.com/SurveyController/SurveyConsole/internal/providers"
 )
 
 // Ensure providers.Registry satisfies engine.ProviderRegistry

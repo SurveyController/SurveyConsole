@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyController-Go/internal/models"
-	"github.com/SurveyController/SurveyController-Go/internal/network/httpclient"
-	"github.com/SurveyController/SurveyController-Go/internal/questions"
+	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
+	"github.com/SurveyController/SurveyConsole/internal/questions"
 )
 
 const (

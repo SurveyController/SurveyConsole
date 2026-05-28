@@ -1,4 +1,4 @@
-module github.com/SurveyController/SurveyController-Go
+module github.com/SurveyController/SurveyConsole
 
 go 1.25.0
 
