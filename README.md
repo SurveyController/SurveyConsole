@@ -1,6 +1,8 @@
-# SurveyController-Go
+# SurveyConsole
 
-问卷自动化处理工具的 Go 语言重写版本。
+SurveyController 的无图形化界面实现 — 轻量、高性能的命令行问卷自动化工具。
+
+> 本项目仅供获得授权的学习与测试使用。请勿用于污染第三方问卷数据。
 
 ## 支持平台
 
@@ -19,14 +21,23 @@
 - AI 主观题作答
 - 并发提交引擎
 - 代理池管理（随机 IP）
+- 二维码解析
+- Excel 报告导出
 - JSON 配置导入/导出
 - CLI 命令行界面
 
-## 安装
+## 快速开始
 
 ```bash
-cd go-rewrite
-go build -o surveycontroller ./cmd/surveycontroller
+# 克隆
+git clone https://github.com/SurveyController/SurveyConsole.git
+cd SurveyConsole
+
+# 构建
+go build -o surveyconsole ./cmd/surveycontroller
+
+# 运行测试
+go test ./...
 ```
 
 ## 使用方法
@@ -35,48 +46,55 @@ go build -o surveycontroller ./cmd/surveycontroller
 
 ```bash
 # 问卷星
-./surveycontroller parse -url "https://www.wjx.cn/vm/xxxxx.aspx"
+./surveyconsole parse -url "https://www.wjx.cn/vm/xxxxx.aspx"
 
 # 腾讯问卷
-./surveycontroller parse -url "https://wj.qq.com/s2/123456/abc/"
+./surveyconsole parse -url "https://wj.qq.com/s2/123456/abc/"
 
 # Credamo 见数
-./surveycontroller parse -url "https://www.credamo.com/s/xxxxx"
+./surveyconsole parse -url "https://www.credamo.com/s/xxxxx"
 ```
 
 ### 创建配置
 
 ```bash
-./surveycontroller config -create -url "https://www.wjx.cn/vm/xxxxx.aspx" -output config.json
+./surveyconsole config -create -url "https://www.wjx.cn/vm/xxxxx.aspx" -output config.json
 ```
 
 ### 运行提交任务
 
 ```bash
 # 基本用法
-./surveycontroller run -url "https://www.wjx.cn/vm/xxxxx.aspx" -target 10 -threads 3
+./surveyconsole run -url "https://www.wjx.cn/vm/xxxxx.aspx" -target 10 -threads 3
 
 # 使用配置文件
-./surveycontroller run -config config.json
+./surveyconsole run -config config.json
 
 # 启用随机 IP
-./surveycontroller run -config config.json -random-ip -proxy-source custom -custom-proxy "http://api.example.com/proxy"
+./surveyconsole run -config config.json -random-ip -proxy-source custom -custom-proxy "http://api.example.com/proxy"
 ```
 
-### 命令行参数
+### 二维码解析
 
-#### `run` 命令
+```bash
+./surveyconsole qr -image qrcode.png
+```
 
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| `-config` | 配置文件路径 (JSON) | - |
-| `-url` | 问卷链接 | - |
-| `-target` | 目标提交份数 | 1 |
-| `-threads` | 并发线程数 | 1 |
-| `-random-ip` | 启用随机 IP | false |
-| `-proxy-source` | 代理源 | default |
-| `-custom-proxy` | 自定义代理 API URL | - |
-| `-verbose` | 详细日志 | false |
+### 导出报告
+
+```bash
+./surveyconsole export -config config.json -output report.xlsx
+```
+
+## 命令行参数
+
+| 命令 | 说明 | 主要参数 |
+|------|------|----------|
+| `run` | 运行提交任务 | `-config`, `-url`, `-target`, `-threads`, `-random-ip` |
+| `parse` | 解析问卷结构 | `-url` |
+| `config` | 配置管理 | `-create`, `-url`, `-output` |
+| `qr` | 解析二维码 | `-image` |
+| `export` | 导出 Excel 报告 | `-config`, `-output` |
 
 ## 配置文件格式
 
@@ -113,7 +131,7 @@ go build -o surveycontroller ./cmd/surveycontroller
 ## 项目结构
 
 ```
-go-rewrite/
+SurveyConsole/
 ├── cmd/surveycontroller/     # CLI 入口
 ├── internal/
 │   ├── config/               # 配置管理
@@ -127,15 +145,10 @@ go-rewrite/
 │   │   ├── httpclient/       # HTTP 客户端
 │   │   └── proxy/            # 代理管理
 │   ├── questions/            # 答案生成 & 心理计量
+│   ├── io/                   # 二维码 & Excel
 │   └── logging/              # 日志
-├── tests/                    # 测试 (25 个)
+├── tests/                    # 测试
 └── configs/                  # 示例配置
-```
-
-## 运行测试
-
-```bash
-go test ./tests/ -v
 ```
 
 ## 高级功能
@@ -167,20 +180,14 @@ go test ./tests/ -v
 
 根据实际提交的选项分布，动态调整概率以趋近目标分布。
 
-## 与 Python 版本的差异
+## 运行内核方向
 
-| 方面 | Python 版本 | Go 版本 |
-|------|------------|---------|
-| 界面 | PySide6 GUI | CLI |
-| 并发 | asyncio + threading | goroutines |
-| HTTP | httpx | net/http |
-| HTML 解析 | BeautifulSoup | goquery |
-| 配置 | JSON | JSON (兼容) |
-| 分发 | Python 脚本 | 单二进制 |
+后续版本会支持三种可选运行内核：
 
-## 后续计划
+- `hybrid`：默认模式。优先保证浏览器兼容性；当平台适配器明确支持安全复用请求时，启用 HTTP 快速路径。
+- `browser`：纯浏览器模式，优先追求兼容性。
+- `http`：纯 HTTP 模式；当所选平台不支持时，必须清晰报错，不自动降级。
 
-- [ ] Web UI 界面
-- [ ] TUI 终端界面
-- [ ] Excel 导出
-- [ ] 自动更新
+## License
+
+MIT
