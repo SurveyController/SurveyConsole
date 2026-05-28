@@ -51,6 +51,8 @@ go mod tidy -diff
 git diff --check
 ```
 
+GitHub Actions 会在 `main` 和 `rewrite` 分支推送时自动运行同一组 Go 验证门禁。
+
 ## 使用方法
 
 ### 解析问卷
