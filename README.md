@@ -89,6 +89,9 @@ GitHub Actions 会在 `main` 和 `rewrite` 分支推送时自动运行同一组 
 # 使用官方随机 IP 参数
 ./surveyconsole run -config config.json -random-ip -proxy-source default -random-ip-user-id 123 -random-ip-device-id "device-id" -proxy-area 110000 -random-ip-minute 3
 
+# 设置提交间隔、作答时长和见数作答时间窗
+./surveyconsole run -config config.json -submit-interval-min 1 -submit-interval-max 3 -answer-duration-min 60 -answer-duration-max 120 -answer-window-start "2026-02-10 09:00:00" -answer-window-end "2026-02-10 10:00:00"
+
 # 启用反填样本
 ./surveyconsole run -config config.json -reverse-fill -reverse-fill-source samples.xlsx -reverse-fill-format auto -reverse-fill-start-row 1 -reverse-fill-threads 1
 ```
@@ -109,7 +112,7 @@ GitHub Actions 会在 `main` 和 `rewrite` 分支推送时自动运行同一组 
 
 | 命令 | 说明 | 主要参数 |
 |------|------|----------|
-| `run` | 运行提交任务 | `-config`, `-url`, `-target`, `-threads`, `-random-ip`, `-proxy-source`, `-custom-proxy`, `-random-ip-user-id`, `-random-ip-device-id`, `-proxy-area`, `-ip-extract-endpoint`, `-random-ip-minute`, `-reverse-fill`, `-reverse-fill-source`, `-reverse-fill-format`, `-reverse-fill-start-row`, `-reverse-fill-threads` |
+| `run` | 运行提交任务 | `-config`, `-url`, `-target`, `-threads`, `-submit-interval-min`, `-submit-interval-max`, `-answer-duration-min`, `-answer-duration-max`, `-answer-window-start`, `-answer-window-end`, `-random-ip`, `-proxy-source`, `-custom-proxy`, `-random-ip-user-id`, `-random-ip-device-id`, `-proxy-area`, `-ip-extract-endpoint`, `-random-ip-minute`, `-reverse-fill`, `-reverse-fill-source`, `-reverse-fill-format`, `-reverse-fill-start-row`, `-reverse-fill-threads` |
 | `parse` | 解析问卷结构 | `-url` |
 | `config` | 配置管理 | `-create`, `-url`, `-output` |
 | `qr` | 解析二维码 | `-image` |
@@ -124,7 +127,8 @@ GitHub Actions 会在 `main` 和 `rewrite` 分支推送时自动运行同一组 
   "target": 10,
   "threads": 3,
   "submit_interval": [0, 0],
-  "answer_duration": [10, 20],
+  "answer_duration": [60, 120],
+  "answer_datetime_window": ["", ""],
   "random_ip_enabled": false,
   "proxy_source": "default",
   "custom_proxy_api": "",
@@ -210,6 +214,10 @@ SurveyConsole/
 ### 运行时分布修正
 
 根据实际提交的选项分布，动态调整概率以趋近目标分布。
+
+### 作答时长和见数时间窗
+
+`answer_duration` 控制提交 payload 中的作答耗时，默认对齐原项目为 60-120 秒。`answer_datetime_window` 仅用于 Credamo 见数，格式为 `YYYY-MM-DD HH:MM:SS`；两端都配置时运行前会校验结束时间晚于开始时间，并确保时间窗能容纳最长作答时长。
 
 ### 反填样本
 

@@ -88,7 +88,7 @@ func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *models.ExecutionConf
 
 	// Build submit body
 	duration := providerutil.SampleAnswerDurationSeconds(cfg, 9, 16)
-	startTimeMS := time.Now().UnixMilli() - int64(duration)*1000
+	startTimeMS := sampleAnswerStartTimeMS(cfg, int64FromAny(initData["timestamp"], time.Now().UnixMilli()), duration)
 	ua := opts.UserAgent
 	if ua == "" {
 		ua = defaultUA
@@ -102,6 +102,25 @@ func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *models.ExecutionConf
 
 	proxyAddr := parseProxy(opts.ProxyAddress)
 	return saveAnswers(ctx, shortURL, answerToken, timeCode, body, ua, proxyAddr)
+}
+
+func sampleAnswerStartTimeMS(cfg *models.ExecutionConfig, initStartedAtMS int64, durationSeconds int) int64 {
+	if cfg == nil {
+		return initStartedAtMS
+	}
+	windowStartMS, windowEndMS := cfg.AnswerDatetimeWindowMS[0], cfg.AnswerDatetimeWindowMS[1]
+	if windowStartMS <= 0 || windowEndMS <= windowStartMS {
+		return initStartedAtMS
+	}
+	durationMS := int64(durationSeconds) * 1000
+	if durationMS <= 0 {
+		durationMS = 1
+	}
+	latestStartMS := windowEndMS - durationMS
+	if latestStartMS <= windowStartMS {
+		return windowStartMS
+	}
+	return windowStartMS + rand.Int63n(latestStartMS-windowStartMS+1)
 }
 
 func extractShortURL(surveyURL string) string {
@@ -793,6 +812,26 @@ func typeCodeForKind(kind string) string {
 }
 
 // Helpers
+
+func int64FromAny(value any, fallback int64) int64 {
+	switch v := value.(type) {
+	case int64:
+		return v
+	case int:
+		return int64(v)
+	case float64:
+		return int64(v)
+	case json.Number:
+		if n, err := v.Int64(); err == nil {
+			return n
+		}
+	case string:
+		if n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
 
 func rawQuestionID(m map[string]any) string {
 	return firstString(m, "id", "questionId", "qstId")

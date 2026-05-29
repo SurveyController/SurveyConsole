@@ -17,6 +17,7 @@ type RuntimeConfig struct {
 	Threads                int                  `json:"threads,omitempty"`
 	SubmitInterval         [2]int               `json:"submit_interval,omitempty"`
 	AnswerDuration         [2]int               `json:"answer_duration,omitempty"`
+	AnswerDatetimeWindow   [2]string            `json:"answer_datetime_window,omitempty"`
 	RandomIPEnabled        bool                 `json:"random_ip_enabled,omitempty"`
 	ProxySource            string               `json:"proxy_source,omitempty"`
 	CustomProxyAPI         string               `json:"custom_proxy_api,omitempty"`
@@ -56,6 +57,7 @@ func NewDefaultRuntimeConfig() RuntimeConfig {
 		SurveyProvider:         ProviderWJX,
 		Target:                 1,
 		Threads:                1,
+		AnswerDuration:         [2]int{60, 120},
 		ProxySource:            "default",
 		FailStopEnabled:        true,
 		PauseOnAliyunCaptcha:   true,

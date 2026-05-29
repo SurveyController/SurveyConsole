@@ -55,6 +55,12 @@ func TestApplyRunOverridesConnectsReverseFillAndProxyFlags(t *testing.T) {
 		URL:                   "https://www.wjx.cn/vm/abc.aspx",
 		Target:                5,
 		Threads:               2,
+		SubmitIntervalMin:     1,
+		SubmitIntervalMax:     3,
+		AnswerDurationMin:     60,
+		AnswerDurationMax:     120,
+		AnswerWindowStart:     "2026-02-10 09:00:00",
+		AnswerWindowEnd:       "2026-02-10 10:00:00",
 		RandomIPEnabled:       true,
 		ProxySource:           "default",
 		CustomProxyAPI:        "http://proxy.example.com",
@@ -71,6 +77,12 @@ func TestApplyRunOverridesConnectsReverseFillAndProxyFlags(t *testing.T) {
 
 	if cfg.URL != "https://www.wjx.cn/vm/abc.aspx" || cfg.Target != 5 || cfg.Threads != 2 {
 		t.Fatalf("basic run overrides = url %q target %d threads %d", cfg.URL, cfg.Target, cfg.Threads)
+	}
+	if cfg.SubmitInterval != [2]int{1, 3} || cfg.AnswerDuration != [2]int{60, 120} {
+		t.Fatalf("time ranges = submit %#v answer %#v", cfg.SubmitInterval, cfg.AnswerDuration)
+	}
+	if cfg.AnswerDatetimeWindow != [2]string{"2026-02-10 09:00:00", "2026-02-10 10:00:00"} {
+		t.Fatalf("answer datetime window = %#v", cfg.AnswerDatetimeWindow)
 	}
 	if !cfg.RandomIPEnabled {
 		t.Fatal("random IP flag was not enabled")

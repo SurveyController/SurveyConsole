@@ -84,6 +84,9 @@ func MergeDefaults(cfg *models.RuntimeConfig) {
 	if cfg.Threads <= 0 {
 		cfg.Threads = defaults.Threads
 	}
+	if cfg.AnswerDuration[0] <= 0 && cfg.AnswerDuration[1] <= 0 {
+		cfg.AnswerDuration = defaults.AnswerDuration
+	}
 	if cfg.ProxySource == "" {
 		cfg.ProxySource = defaults.ProxySource
 	}
@@ -126,6 +129,7 @@ func BuildExecutionConfigWithError(cfg *models.RuntimeConfig, questions []models
 		StopOnFailEnabled:           cfg.FailStopEnabled,
 		SubmitIntervalRangeSeconds:  cfg.SubmitInterval,
 		AnswerDurationRangeSeconds:  cfg.AnswerDuration,
+		AnswerDatetimeWindowMS:      [2]int64{},
 		RandomProxyIPEnabled:        cfg.RandomIPEnabled,
 		ProxySource:                 cfg.ProxySource,
 		CustomProxyAPI:              cfg.CustomProxyAPI,
@@ -295,6 +299,12 @@ func BuildExecutionConfigWithError(cfg *models.RuntimeConfig, questions []models
 			ec.QuestionDimensionMap[candidate.QuestionNum] = &dim
 		}
 	}
+
+	answerDatetimeWindowMS, err := buildAnswerDatetimeWindowMS(cfg)
+	if err != nil {
+		return ec, err
+	}
+	ec.AnswerDatetimeWindowMS = answerDatetimeWindowMS
 
 	if cfg.ReverseFillEnabled {
 		spec, err := reversefill.BuildSpec(cfg, questions)

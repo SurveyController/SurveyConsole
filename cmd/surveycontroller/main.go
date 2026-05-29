@@ -70,6 +70,7 @@ func printUsage() {
 
 示例:
   surveycontroller run -config config.json -target 10 -threads 3
+  surveycontroller run -config config.json -answer-duration-min 60 -answer-duration-max 120
   surveycontroller run -config config.json -reverse-fill -reverse-fill-source samples.xlsx
   surveycontroller parse -url "https://www.wjx.cn/vm/xxxxx.aspx"
   surveycontroller config -create -url "https://www.wjx.cn/vm/xxxxx.aspx"
@@ -83,6 +84,12 @@ func cmdRun(args []string) {
 	urlFlag := fs.String("url", "", "问卷链接")
 	targetFlag := fs.Int("target", 0, "目标提交份数")
 	threadsFlag := fs.Int("threads", 0, "并发线程数")
+	submitIntervalMinFlag := fs.Int("submit-interval-min", -1, "提交间隔最小秒数")
+	submitIntervalMaxFlag := fs.Int("submit-interval-max", -1, "提交间隔最大秒数")
+	answerDurationMinFlag := fs.Int("answer-duration-min", -1, "作答时长最小秒数")
+	answerDurationMaxFlag := fs.Int("answer-duration-max", -1, "作答时长最大秒数")
+	answerWindowStartFlag := fs.String("answer-window-start", "", "见数作答时间窗开始 (YYYY-MM-DD HH:MM:SS)")
+	answerWindowEndFlag := fs.String("answer-window-end", "", "见数作答时间窗结束 (YYYY-MM-DD HH:MM:SS)")
 	randomIPFlag := fs.Bool("random-ip", false, "启用随机 IP")
 	proxySourceFlag := fs.String("proxy-source", "", "代理源 (default/benefit/custom)")
 	customProxyFlag := fs.String("custom-proxy", "", "自定义代理 API URL")
@@ -124,6 +131,12 @@ func cmdRun(args []string) {
 		URL:                   *urlFlag,
 		Target:                *targetFlag,
 		Threads:               *threadsFlag,
+		SubmitIntervalMin:     *submitIntervalMinFlag,
+		SubmitIntervalMax:     *submitIntervalMaxFlag,
+		AnswerDurationMin:     *answerDurationMinFlag,
+		AnswerDurationMax:     *answerDurationMaxFlag,
+		AnswerWindowStart:     *answerWindowStartFlag,
+		AnswerWindowEnd:       *answerWindowEndFlag,
 		RandomIPEnabled:       *randomIPFlag,
 		ProxySource:           *proxySourceFlag,
 		CustomProxyAPI:        *customProxyFlag,
@@ -214,6 +227,12 @@ type runOverrides struct {
 	URL                   string
 	Target                int
 	Threads               int
+	SubmitIntervalMin     int
+	SubmitIntervalMax     int
+	AnswerDurationMin     int
+	AnswerDurationMax     int
+	AnswerWindowStart     string
+	AnswerWindowEnd       string
 	RandomIPEnabled       bool
 	ProxySource           string
 	CustomProxyAPI        string
@@ -238,6 +257,18 @@ func applyRunOverrides(cfg *models.RuntimeConfig, opts runOverrides) {
 	}
 	if opts.Threads > 0 {
 		cfg.Threads = opts.Threads
+	}
+	if opts.SubmitIntervalMin >= 0 || opts.SubmitIntervalMax >= 0 {
+		cfg.SubmitInterval = applyRangeOverride(cfg.SubmitInterval, opts.SubmitIntervalMin, opts.SubmitIntervalMax)
+	}
+	if opts.AnswerDurationMin >= 0 || opts.AnswerDurationMax >= 0 {
+		cfg.AnswerDuration = applyRangeOverride(cfg.AnswerDuration, opts.AnswerDurationMin, opts.AnswerDurationMax)
+	}
+	if opts.AnswerWindowStart != "" {
+		cfg.AnswerDatetimeWindow[0] = opts.AnswerWindowStart
+	}
+	if opts.AnswerWindowEnd != "" {
+		cfg.AnswerDatetimeWindow[1] = opts.AnswerWindowEnd
 	}
 	if opts.RandomIPEnabled {
 		cfg.RandomIPEnabled = true
@@ -281,6 +312,22 @@ func applyRunOverrides(cfg *models.RuntimeConfig, opts runOverrides) {
 	if opts.ReverseFillThreads > 0 {
 		cfg.ReverseFillThreads = opts.ReverseFillThreads
 	}
+}
+
+func applyRangeOverride(current [2]int, minValue, maxValue int) [2]int {
+	if minValue >= 0 {
+		current[0] = minValue
+	}
+	if maxValue >= 0 {
+		current[1] = maxValue
+	}
+	if current[0] < 0 {
+		current[0] = 0
+	}
+	if current[1] < current[0] {
+		current[1] = current[0]
+	}
+	return current
 }
 
 func newProxyPoolFromRuntimeConfig(cfg *models.RuntimeConfig) *proxy.Pool {

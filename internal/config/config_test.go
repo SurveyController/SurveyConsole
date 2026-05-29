@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/SurveyController/SurveyConsole/internal/models"
@@ -135,6 +136,77 @@ func TestBuildExecutionConfigIndexesProviderQuestionIDs(t *testing.T) {
 	}
 	if execCfg.ProviderQuestionMetadataMap[providerID].Num != 7 {
 		t.Fatalf("bare provider metadata = %#v, want question 7", execCfg.ProviderQuestionMetadataMap[providerID])
+	}
+}
+
+func TestBuildExecutionConfigBuildsCredamoAnswerDatetimeWindow(t *testing.T) {
+	cfg := &models.RuntimeConfig{
+		SurveyProvider:       models.ProviderCredamo,
+		AnswerDuration:       [2]int{60, 120},
+		AnswerDatetimeWindow: [2]string{"2026-02-10 09:00:00", "2026-02-10 10:00:00"},
+	}
+
+	execCfg, err := BuildExecutionConfigWithError(cfg, nil)
+	if err != nil {
+		t.Fatalf("BuildExecutionConfigWithError failed: %v", err)
+	}
+	startMS, endMS := execCfg.AnswerDatetimeWindowMS[0], execCfg.AnswerDatetimeWindowMS[1]
+	if startMS <= 0 || endMS <= startMS {
+		t.Fatalf("answer datetime window ms = %#v, want positive ascending values", execCfg.AnswerDatetimeWindowMS)
+	}
+}
+
+func TestBuildExecutionConfigAllowsMissingCredamoAnswerDatetimeWindow(t *testing.T) {
+	cfg := &models.RuntimeConfig{
+		SurveyProvider: models.ProviderCredamo,
+		AnswerDuration: [2]int{60, 120},
+	}
+
+	execCfg, err := BuildExecutionConfigWithError(cfg, nil)
+	if err != nil {
+		t.Fatalf("BuildExecutionConfigWithError failed: %v", err)
+	}
+	if execCfg.AnswerDatetimeWindowMS != [2]int64{} {
+		t.Fatalf("answer datetime window ms = %#v, want zero window", execCfg.AnswerDatetimeWindowMS)
+	}
+}
+
+func TestBuildExecutionConfigRejectsInvalidCredamoAnswerDatetimeWindow(t *testing.T) {
+	tests := []struct {
+		name   string
+		window [2]string
+		want   string
+	}{
+		{
+			name:   "partial",
+			window: [2]string{"2026-02-10 09:00:00", ""},
+			want:   "未配完整",
+		},
+		{
+			name:   "backwards",
+			window: [2]string{"2026-02-10 10:00:00", "2026-02-10 09:00:00"},
+			want:   "必须晚于",
+		},
+		{
+			name:   "narrow",
+			window: [2]string{"2026-02-10 09:00:00", "2026-02-10 09:00:10"},
+			want:   "太窄",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &models.RuntimeConfig{
+				SurveyProvider:       models.ProviderCredamo,
+				AnswerDuration:       [2]int{60, 120},
+				AnswerDatetimeWindow: tt.window,
+			}
+
+			_, err := BuildExecutionConfigWithError(cfg, nil)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v, want containing %q", err, tt.want)
+			}
+		})
 	}
 }
 

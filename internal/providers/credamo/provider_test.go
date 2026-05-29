@@ -178,6 +178,30 @@ func TestSampleAnswerDurationSecondsAllowsFixedConfiguredRange(t *testing.T) {
 	}
 }
 
+func TestSampleAnswerStartTimeUsesCredamoDatetimeWindow(t *testing.T) {
+	cfg := &models.ExecutionConfig{
+		SurveyProvider:             models.ProviderCredamo,
+		AnswerDatetimeWindowMS:     [2]int64{1710000000000, 1710003600000},
+		AnswerDurationRangeSeconds: [2]int{70, 70},
+	}
+
+	startedAt := sampleAnswerStartTimeMS(cfg, 1700000000000, 70)
+
+	if startedAt < 1710000000000 || startedAt > 1710003530000 {
+		t.Fatalf("startedAt = %d, want inside configured window with duration", startedAt)
+	}
+}
+
+func TestSampleAnswerStartTimeFallsBackToInitTimeWhenWindowMissing(t *testing.T) {
+	cfg := &models.ExecutionConfig{SurveyProvider: models.ProviderCredamo}
+
+	startedAt := sampleAnswerStartTimeMS(cfg, 1700000000000, 70)
+
+	if startedAt != 1700000000000 {
+		t.Fatalf("startedAt = %d, want init timestamp", startedAt)
+	}
+}
+
 func TestProviderConfigIndexPrefersFullKeyAndFallsBackToBareID(t *testing.T) {
 	meta := models.SurveyQuestionMeta{
 		Provider:           ProviderName,

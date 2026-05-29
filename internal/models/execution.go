@@ -79,8 +79,9 @@ type ExecutionConfig struct {
 	FailThreshold     int  `json:"fail_threshold"`
 	StopOnFailEnabled bool `json:"stop_on_fail_enabled"`
 
-	SubmitIntervalRangeSeconds [2]int `json:"submit_interval_range_seconds"`
-	AnswerDurationRangeSeconds [2]int `json:"answer_duration_range_seconds"`
+	SubmitIntervalRangeSeconds [2]int   `json:"submit_interval_range_seconds"`
+	AnswerDurationRangeSeconds [2]int   `json:"answer_duration_range_seconds"`
+	AnswerDatetimeWindowMS     [2]int64 `json:"answer_datetime_window_ms,omitempty"`
 
 	RandomProxyIPEnabled   bool           `json:"random_proxy_ip_enabled"`
 	ProxySource            string         `json:"proxy_source"`
