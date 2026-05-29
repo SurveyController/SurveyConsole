@@ -231,4 +231,4 @@ Go 重写当前是 CLI + HTTP provider 运行模式：WJX、腾讯问卷、Creda
 
 ## License
 
-MIT
+AGPL-3.0 
