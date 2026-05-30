@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
@@ -15,7 +17,7 @@ func ParseConfigIndex(s string) int {
 }
 
 // ProviderConfigIndex resolves a config entry by full provider key before bare provider question id.
-func ProviderConfigIndex(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta) (string, bool) {
+func ProviderConfigIndex(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta) (string, bool) {
 	if cfg == nil || meta.ProviderQuestionID == "" {
 		return "", false
 	}
@@ -99,7 +101,7 @@ func MatrixRowProbabilities(raw any, rowIndex, optionCount int) []float64 {
 }
 
 // SampleAnswerDurationSeconds samples a configured duration or falls back to an inclusive range.
-func SampleAnswerDurationSeconds(cfg *models.ExecutionConfig, fallbackMin, fallbackMax int) int {
+func SampleAnswerDurationSeconds(cfg *execution.ExecutionConfig, fallbackMin, fallbackMax int) int {
 	if cfg != nil {
 		min := cfg.AnswerDurationRangeSeconds[0]
 		max := cfg.AnswerDurationRangeSeconds[1]

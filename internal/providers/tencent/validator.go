@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/execution"
 )
 
-func validateTencentActions(actions []TencentAnswerAction, cfg *models.ExecutionConfig) error {
+func validateTencentActions(actions []TencentAnswerAction, cfg *execution.ExecutionConfig) error {
 	for _, action := range actions {
 		meta, ok := cfg.ProviderQuestionMetadataMap[action.QuestionID]
 		if !ok {

@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
 	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
@@ -55,7 +58,7 @@ func (p *Provider) ParseSurvey(ctx context.Context, surveyURL string) (*models.S
 }
 
 // FillSurveyHTTP submits a Tencent survey response via HTTP.
-func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *models.ExecutionConfig, state *models.ExecutionState, opts models.FillOptions) (bool, error) {
+func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *execution.ExecutionConfig, state *runstate.ExecutionState, opts models.FillOptions) (bool, error) {
 	if state.IsStopped() {
 		return false, nil
 	}

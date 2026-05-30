@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/config"
 	"github.com/SurveyController/SurveyConsole/internal/engine"
 	"github.com/SurveyController/SurveyConsole/internal/logging"
@@ -196,7 +198,7 @@ func (m *TaskManager) run(ctx context.Context, id string) {
 	})
 	m.logTask(id, logging.LevelInfo, "开始执行", logging.F("target", task.Config.Target), logging.F("threads", task.Config.Threads))
 
-	state := models.NewExecutionState()
+	state := runstate.NewExecutionState()
 	err := m.execute(ctx, task.Config, state, id)
 
 	finished := time.Now()
@@ -231,7 +233,7 @@ func (m *TaskManager) run(ctx context.Context, id string) {
 	_ = m.store.SaveTask(snapshot)
 }
 
-func (m *TaskManager) execute(ctx context.Context, cfg *models.RuntimeConfig, state *models.ExecutionState, taskID string) error {
+func (m *TaskManager) execute(ctx context.Context, cfg *models.RuntimeConfig, state *runstate.ExecutionState, taskID string) error {
 	config.MergeDefaults(cfg)
 	if cfg.URL == "" {
 		return errors.New("必须提供问卷链接")

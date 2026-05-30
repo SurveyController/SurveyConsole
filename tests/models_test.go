@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
@@ -140,8 +143,8 @@ func TestRandomIPSession(t *testing.T) {
 }
 
 func TestExecutionState(t *testing.T) {
-	state := models.NewExecutionState()
-	state.Config = &models.ExecutionConfig{TargetNum: 5}
+	state := runstate.NewExecutionState()
+	state.Config = &execution.ExecutionConfig{TargetNum: 5}
 
 	state.EnsureWorkerThreads(3, "Worker")
 	if len(state.ThreadProgress) != 3 {

@@ -8,6 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/logging"
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/network/proxy"
@@ -66,7 +69,7 @@ func (e *Engine) IsPaused() bool {
 }
 
 // Run starts the survey submission run. It blocks until complete or stopped.
-func (e *Engine) Run(ctx context.Context, cfg *models.ExecutionConfig, state *models.ExecutionState) error {
+func (e *Engine) Run(ctx context.Context, cfg *execution.ExecutionConfig, state *runstate.ExecutionState) error {
 	adapter, err := e.registry.Get(cfg.SurveyProvider)
 	if err != nil {
 		return fmt.Errorf("获取 provider 失败: %w", err)
@@ -139,7 +142,7 @@ func (e *Engine) prefetchProxyBatch(pool *proxy.Pool, count int) {
 	pool.AddLeases(leases)
 }
 
-func (e *Engine) proxyPrefetchLoop(ctx context.Context, pool *proxy.Pool, cfg *models.ExecutionConfig, concurrency int) {
+func (e *Engine) proxyPrefetchLoop(ctx context.Context, pool *proxy.Pool, cfg *execution.ExecutionConfig, concurrency int) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -158,7 +161,7 @@ func (e *Engine) proxyPrefetchLoop(ctx context.Context, pool *proxy.Pool, cfg *m
 	}
 }
 
-func (e *Engine) worker(ctx context.Context, adapter models.ProviderAdapter, cfg *models.ExecutionConfig, state *models.ExecutionState, scheduler *Scheduler, workerID int) {
+func (e *Engine) worker(ctx context.Context, adapter models.ProviderAdapter, cfg *execution.ExecutionConfig, state *runstate.ExecutionState, scheduler *Scheduler, workerID int) {
 	threadName := fmt.Sprintf("Worker-%d", workerID+1)
 
 	for {
@@ -250,7 +253,7 @@ func (e *Engine) worker(ctx context.Context, adapter models.ProviderAdapter, cfg
 	}
 }
 
-func (e *Engine) executeOne(ctx context.Context, adapter models.ProviderAdapter, cfg *models.ExecutionConfig, state *models.ExecutionState, threadName string) bool {
+func (e *Engine) executeOne(ctx context.Context, adapter models.ProviderAdapter, cfg *execution.ExecutionConfig, state *runstate.ExecutionState, threadName string) bool {
 	running := true
 	state.UpdateThreadStatus(threadName, "构造答案", &running)
 	defer func() {
@@ -300,7 +303,7 @@ func (e *Engine) executeOne(ctx context.Context, adapter models.ProviderAdapter,
 	return success
 }
 
-func (e *Engine) emit(threadName, statusText string, success, fail bool, state *models.ExecutionState) {
+func (e *Engine) emit(threadName, statusText string, success, fail bool, state *runstate.ExecutionState) {
 	if e.handler == nil {
 		return
 	}
@@ -347,7 +350,7 @@ var userAgentProfiles = map[string]string{
 	"pc":     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 }
 
-func sampleUserAgent(cfg *models.ExecutionConfig) string {
+func sampleUserAgent(cfg *execution.ExecutionConfig) string {
 	if !cfg.RandomUserAgentEnabled {
 		return ""
 	}

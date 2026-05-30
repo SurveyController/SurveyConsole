@@ -3,6 +3,8 @@ package providerutil
 import (
 	"testing"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
@@ -36,7 +38,7 @@ func TestProviderConfigIndexPrefersFullKey(t *testing.T) {
 		ProviderQuestionID: "q1",
 	}
 	fullKey := models.MakeProviderQuestionKey(models.ProviderQQ, "page-1", "q1")
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		ProviderQuestionConfigIndexMap: map[string]string{
 			"q1":    "1",
 			fullKey: "2",
@@ -52,7 +54,7 @@ func TestProviderConfigIndexPrefersFullKey(t *testing.T) {
 }
 
 func TestSampleAnswerDurationSecondsUsesConfiguredRange(t *testing.T) {
-	cfg := &models.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{12, 12}}
+	cfg := &execution.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{12, 12}}
 	if got := SampleAnswerDurationSeconds(cfg, 1, 3); got != 12 {
 		t.Fatalf("SampleAnswerDurationSeconds fixed = %d, want 12", got)
 	}

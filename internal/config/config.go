@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/reversefill"
 )
@@ -111,15 +113,15 @@ func MergeDefaults(cfg *models.RuntimeConfig) {
 }
 
 // BuildExecutionConfig creates an ExecutionConfig from a RuntimeConfig.
-func BuildExecutionConfig(cfg *models.RuntimeConfig, questions []models.SurveyQuestionMeta) *models.ExecutionConfig {
+func BuildExecutionConfig(cfg *models.RuntimeConfig, questions []models.SurveyQuestionMeta) *execution.ExecutionConfig {
 	ec, _ := BuildExecutionConfigWithError(cfg, questions)
 	return ec
 }
 
 // BuildExecutionConfigWithError creates an ExecutionConfig and reports feature preparation errors.
-func BuildExecutionConfigWithError(cfg *models.RuntimeConfig, questions []models.SurveyQuestionMeta) (*models.ExecutionConfig, error) {
+func BuildExecutionConfigWithError(cfg *models.RuntimeConfig, questions []models.SurveyQuestionMeta) (*execution.ExecutionConfig, error) {
 	entryCount := len(cfg.QuestionEntries)
-	ec := &models.ExecutionConfig{
+	ec := &execution.ExecutionConfig{
 		URL:                         cfg.URL,
 		SurveyTitle:                 cfg.SurveyTitle,
 		SurveyProvider:              cfg.SurveyProvider,

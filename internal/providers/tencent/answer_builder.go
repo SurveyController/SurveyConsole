@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
 	"github.com/SurveyController/SurveyConsole/internal/questions"
 )
 
-func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionState, rawQuestions []map[string]any, threadName string) ([]TencentAnswerAction, error) {
+func buildAnswerActions(cfg *execution.ExecutionConfig, state *runstate.ExecutionState, rawQuestions []map[string]any, threadName string) ([]TencentAnswerAction, error) {
 	runtime := questions.NewRunContextForThread(cfg, state, threadName)
 	// Build a map from question ID to raw question for option ID lookup
 	rawByQID := make(map[string]map[string]any)
@@ -59,7 +62,7 @@ func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionStat
 	return actions, nil
 }
 
-func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
+func sortedQuestions(cfg *execution.ExecutionConfig) []models.SurveyQuestionMeta {
 	questions := make([]models.SurveyQuestionMeta, 0, len(cfg.QuestionsMetadata))
 	for _, q := range cfg.QuestionsMetadata {
 		questions = append(questions, q)
@@ -81,7 +84,7 @@ func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
 	return questions
 }
 
-func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, rawQ map[string]any, runtime *questions.RunContext) (*TencentAnswerAction, error) {
+func buildSingleAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, rawQ map[string]any, runtime *questions.RunContext) (*TencentAnswerAction, error) {
 	typeCode := meta.TypeCode
 	optionCount := meta.Options
 	if optionCount <= 0 {
@@ -259,7 +262,7 @@ func tencentIntSet(value any) map[int]bool {
 	return result
 }
 
-func buildChoiceAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, isDropdown bool, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
+func buildChoiceAnswer(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, isDropdown bool, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
 	if meta.ForcedOptionIndex != nil && *meta.ForcedOptionIndex >= 0 {
 		idx := *meta.ForcedOptionIndex
 		if idx >= optionCount {
@@ -286,7 +289,7 @@ func buildChoiceAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 	}
 }
 
-func buildMultipleAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
+func buildMultipleAnswer(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
 	minLimit := 1
 	maxLimit := optionCount
 	if meta.MultiMinLimit != nil {
@@ -320,7 +323,7 @@ func buildMultipleAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestion
 	}
 }
 
-func buildScaleAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
+func buildScaleAnswer(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
 	probs := make([]float64, optionCount)
 	if configIdx >= 0 && configIdx < len(cfg.ScaleProb) {
 		if p, ok := providerutil.Float64Slice(cfg.ScaleProb[configIdx]); ok {
@@ -343,7 +346,7 @@ func buildScaleAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMet
 	}
 }
 
-func buildMatrixAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
+func buildMatrixAnswer(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
 	rows := meta.Rows
 	if rows <= 0 {
 		rows = 1
@@ -419,7 +422,7 @@ func getMatrixRowRaw(rawQ map[string]any, rowIndex int) map[string]any {
 	return subMap
 }
 
-func buildTextAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) *TencentAnswerAction {
+func buildTextAnswer(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) *TencentAnswerAction {
 	text := "满意"
 	if candidate, ok := questions.ChooseConfiguredTextCandidate(cfg, configIdx); ok {
 		text = candidate
@@ -436,7 +439,7 @@ func buildTextAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta
 	}
 }
 
-func getProbs(cfg *models.ExecutionConfig, configIdx, optionCount int, isDropdown bool) []float64 {
+func getProbs(cfg *execution.ExecutionConfig, configIdx, optionCount int, isDropdown bool) []float64 {
 	probs := make([]float64, optionCount)
 	source := cfg.SingleProb
 	if isDropdown {

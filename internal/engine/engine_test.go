@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/execution"
 )
 
 func TestSampleIntervalDelayUsesRange(t *testing.T) {
@@ -26,12 +26,12 @@ func TestSampleIntervalDelaySwapsBounds(t *testing.T) {
 }
 
 func TestSampleUserAgentHonorsDisabledAndRatios(t *testing.T) {
-	disabled := sampleUserAgent(&models.ExecutionConfig{})
+	disabled := sampleUserAgent(&execution.ExecutionConfig{})
 	if disabled != "" {
 		t.Fatalf("disabled UA = %q, want empty provider default", disabled)
 	}
 
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		RandomUserAgentEnabled: true,
 		RandomUserAgentKeys:    []string{"pc"},
 		UserAgentRatios:        map[string]int{"pc": 100},

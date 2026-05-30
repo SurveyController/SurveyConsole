@@ -5,6 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
 )
@@ -72,7 +75,7 @@ func TestBuildSubmitBodyCoversChoiceTextAndMatrix(t *testing.T) {
 }
 
 func TestSampleAnswerDurationSecondsAllowsFixedConfiguredRange(t *testing.T) {
-	cfg := &models.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{45, 45}}
+	cfg := &execution.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{45, 45}}
 	if got := providerutil.SampleAnswerDurationSeconds(cfg, 60, 60); got != 45 {
 		t.Fatalf("sampleAnswerDurationSeconds fixed range = %d, want 45", got)
 	}
@@ -85,7 +88,7 @@ func TestProviderConfigIndexPrefersFullKeyAndFallsBackToBareID(t *testing.T) {
 		ProviderQuestionID: "q1",
 	}
 	fullKey := models.MakeProviderQuestionKey(ProviderName, "page-1", "q1")
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		ProviderQuestionConfigIndexMap: map[string]string{
 			"q1":    "1",
 			fullKey: "2",
@@ -161,7 +164,7 @@ func TestStandardizeQuestionsExtractsTencentDisplayAndJumpLogic(t *testing.T) {
 }
 
 func TestBuildAnswerActionsAppliesTencentDisplayConditions(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		SingleProb: []any{[]float64{0, 1}, nil, nil},
 		QuestionConfigIndexMap: map[int]string{
 			1: "0",
@@ -191,7 +194,7 @@ func TestBuildAnswerActionsAppliesTencentDisplayConditions(t *testing.T) {
 		{"id": "q-3", "type": "text", "page_id": "p-1"},
 	}
 
-	actions, err := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	actions, err := buildAnswerActions(cfg, runstate.NewExecutionState(), rawQuestions, "")
 	if err != nil {
 		t.Fatalf("buildAnswerActions returned error: %v", err)
 	}
@@ -204,7 +207,7 @@ func TestBuildAnswerActionsAppliesTencentDisplayConditions(t *testing.T) {
 }
 
 func TestBuildAnswerActionsAppliesTencentForwardJumpRules(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		SingleProb: []any{[]float64{1, 0}, nil, nil},
 		QuestionConfigIndexMap: map[int]string{
 			1: "0",
@@ -232,7 +235,7 @@ func TestBuildAnswerActionsAppliesTencentForwardJumpRules(t *testing.T) {
 		{"id": "q-3", "type": "text", "page_id": "p-1"},
 	}
 
-	actions, err := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	actions, err := buildAnswerActions(cfg, runstate.NewExecutionState(), rawQuestions, "")
 	if err != nil {
 		t.Fatalf("buildAnswerActions returned error: %v", err)
 	}
@@ -245,7 +248,7 @@ func TestBuildAnswerActionsAppliesTencentForwardJumpRules(t *testing.T) {
 }
 
 func TestBuildAnswerActionsRejectsUnsupportedTencentQuestion(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		QuestionsMetadata: map[int]models.SurveyQuestionMeta{
 			1: {
 				Num:                1,
@@ -261,7 +264,7 @@ func TestBuildAnswerActionsRejectsUnsupportedTencentQuestion(t *testing.T) {
 		{"id": "q-upload", "type": "upload", "page_id": "p-1"},
 	}
 
-	_, err := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	_, err := buildAnswerActions(cfg, runstate.NewExecutionState(), rawQuestions, "")
 	var unsupported *providerutil.UnsupportedQuestionError
 	if !errors.As(err, &unsupported) {
 		t.Fatalf("error = %#v, want UnsupportedQuestionError", err)

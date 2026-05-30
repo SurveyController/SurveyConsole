@@ -4,7 +4,7 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/execution"
 )
 
 // WeightedIndex selects an index based on probability weights.
@@ -46,7 +46,7 @@ func ChooseTextCandidate(texts []string, probs []float64) string {
 }
 
 // ChooseConfiguredTextCandidate selects one text candidate from an ExecutionConfig.
-func ChooseConfiguredTextCandidate(cfg *models.ExecutionConfig, configIdx int) (string, bool) {
+func ChooseConfiguredTextCandidate(cfg *execution.ExecutionConfig, configIdx int) (string, bool) {
 	if cfg == nil || configIdx < 0 || configIdx >= len(cfg.Texts) || len(cfg.Texts[configIdx]) == 0 {
 		return "", false
 	}

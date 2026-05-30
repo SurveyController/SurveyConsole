@@ -3,12 +3,15 @@ package credamo
 import (
 	"math/rand"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
 	"github.com/SurveyController/SurveyConsole/internal/questions"
 )
 
-func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionState, threadName string) ([]CredamoAnswerAction, error) {
+func buildAnswerActions(cfg *execution.ExecutionConfig, state *runstate.ExecutionState, threadName string) ([]CredamoAnswerAction, error) {
 	runtime := questions.NewRunContextForThread(cfg, state, threadName)
 	var actions []CredamoAnswerAction
 	for _, meta := range sortedQuestions(cfg) {
@@ -26,7 +29,7 @@ func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionStat
 	return actions, nil
 }
 
-func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
+func sortedQuestions(cfg *execution.ExecutionConfig) []models.SurveyQuestionMeta {
 	questions := make([]models.SurveyQuestionMeta, 0, len(cfg.QuestionsMetadata))
 	for _, q := range cfg.QuestionsMetadata {
 		questions = append(questions, q)
@@ -41,7 +44,7 @@ func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
 	return questions
 }
 
-func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, runtime *questions.RunContext) (*CredamoAnswerAction, error) {
+func buildSingleAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, runtime *questions.RunContext) (*CredamoAnswerAction, error) {
 	typeCode := meta.TypeCode
 	optionCount := meta.Options
 	if optionCount <= 0 {
@@ -93,7 +96,7 @@ func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 	}
 }
 
-func buildChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, runtime *questions.RunContext) *CredamoAnswerAction {
+func buildChoiceAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, runtime *questions.RunContext) *CredamoAnswerAction {
 	if meta.ForcedOptionIndex != nil && *meta.ForcedOptionIndex >= 0 {
 		idx := *meta.ForcedOptionIndex
 		if idx >= optionCount {
@@ -126,7 +129,7 @@ func buildChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 	}
 }
 
-func buildMultipleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, runtime *questions.RunContext) *CredamoAnswerAction {
+func buildMultipleAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, runtime *questions.RunContext) *CredamoAnswerAction {
 	probs := make([]float64, optionCount)
 	if configIdx >= 0 && configIdx < len(cfg.MultipleProb) {
 		copy(probs, cfg.MultipleProb[configIdx])
@@ -154,7 +157,7 @@ func buildMultipleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestion
 	}
 }
 
-func buildScaleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, runtime *questions.RunContext) *CredamoAnswerAction {
+func buildScaleAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx, optionCount int, runtime *questions.RunContext) *CredamoAnswerAction {
 	probs := make([]float64, optionCount)
 	if configIdx >= 0 && configIdx < len(cfg.ScaleProb) {
 		if p, ok := providerutil.Float64Slice(cfg.ScaleProb[configIdx]); ok {
@@ -175,7 +178,7 @@ func buildScaleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMet
 	}
 }
 
-func buildMatrixAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) *CredamoAnswerAction {
+func buildMatrixAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) *CredamoAnswerAction {
 	rows := meta.Rows
 	if rows <= 0 {
 		rows = 1
@@ -225,7 +228,7 @@ func buildOrderAction(meta models.SurveyQuestionMeta, optionCount int) *CredamoA
 	}
 }
 
-func buildTextAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) *CredamoAnswerAction {
+func buildTextAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) *CredamoAnswerAction {
 	text := "满意"
 	if candidate, ok := questions.ChooseConfiguredTextCandidate(cfg, configIdx); ok {
 		text = candidate

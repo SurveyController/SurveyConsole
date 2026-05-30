@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
@@ -100,7 +102,7 @@ func TestTaskManagerLoadMarksRunningInterruptedAndSkipsBadJSON(t *testing.T) {
 
 func TestCloneTaskSnapshotsExecutionState(t *testing.T) {
 	running := true
-	state := models.NewExecutionState()
+	state := runstate.NewExecutionState()
 	state.UpdateThreadStatus("Worker-1", "运行中", &running)
 	state.IncrementSuccess()
 

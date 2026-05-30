@@ -10,15 +10,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
-var stateDistributionTrackers sync.Map // map[*models.ExecutionState]*DistributionTracker
+var stateDistributionTrackers sync.Map // map[*runstate.ExecutionState]*DistributionTracker
 
 // RunContext holds per-submission answer-generation state.
 type RunContext struct {
-	cfg          *models.ExecutionConfig
-	state        *models.ExecutionState
+	cfg          *execution.ExecutionConfig
+	state        *runstate.ExecutionState
 	threadName   string
 	distribution *DistributionTracker
 	consistency  *ConsistencyContext
@@ -27,14 +30,14 @@ type RunContext struct {
 }
 
 // NewRunContext builds the answer-generation context for one submitted sample.
-func NewRunContext(cfg *models.ExecutionConfig, state *models.ExecutionState) *RunContext {
+func NewRunContext(cfg *execution.ExecutionConfig, state *runstate.ExecutionState) *RunContext {
 	return NewRunContextForThread(cfg, state, "")
 }
 
 // NewRunContextForThread builds the answer-generation context bound to a worker thread.
-func NewRunContextForThread(cfg *models.ExecutionConfig, state *models.ExecutionState, threadName string) *RunContext {
+func NewRunContextForThread(cfg *execution.ExecutionConfig, state *runstate.ExecutionState, threadName string) *RunContext {
 	if cfg == nil {
-		cfg = &models.ExecutionConfig{}
+		cfg = &execution.ExecutionConfig{}
 	}
 	rt := &RunContext{
 		cfg:          cfg,
@@ -57,7 +60,7 @@ func NewRunContextForThread(cfg *models.ExecutionConfig, state *models.Execution
 	return rt
 }
 
-func distributionTrackerForState(state *models.ExecutionState) *DistributionTracker {
+func distributionTrackerForState(state *runstate.ExecutionState) *DistributionTracker {
 	if state == nil {
 		return NewDistributionTracker()
 	}
@@ -547,7 +550,7 @@ func (r *RunContext) recordSingleChoice(questionNum, selected, optionCount int, 
 	}
 }
 
-func hasAIText(cfg *models.ExecutionConfig) bool {
+func hasAIText(cfg *execution.ExecutionConfig) bool {
 	if cfg == nil {
 		return false
 	}
@@ -566,7 +569,7 @@ func hasAIText(cfg *models.ExecutionConfig) bool {
 	return false
 }
 
-func buildPsychometricPlanFromConfig(cfg *models.ExecutionConfig) *DimensionPsychometricPlan {
+func buildPsychometricPlanFromConfig(cfg *execution.ExecutionConfig) *DimensionPsychometricPlan {
 	if cfg == nil || len(cfg.QuestionDimensionMap) == 0 {
 		return nil
 	}
@@ -626,7 +629,7 @@ func buildPsychometricPlanFromConfig(cfg *models.ExecutionConfig) *DimensionPsyc
 	return BuildDimensionPsychometricPlan(grouped, cfg.PsychoTargetAlpha)
 }
 
-func psychometricTargetProbabilities(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, rawConfigIdx string, optionCount int, rowIndex *int) []float64 {
+func psychometricTargetProbabilities(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, rawConfigIdx string, optionCount int, rowIndex *int) []float64 {
 	if cfg == nil || optionCount <= 0 {
 		return nil
 	}

@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+
 	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
 )
 
@@ -64,7 +65,7 @@ func classifyCredamoPayload(payload map[string]any) string {
 	return SubmitSuccess
 }
 
-func buildSubmitBody(shortURL string, rawQuestions []map[string]any, actions []CredamoAnswerAction, cfg *models.ExecutionConfig, startMS int64, duration int) map[string]any {
+func buildSubmitBody(shortURL string, rawQuestions []map[string]any, actions []CredamoAnswerAction, cfg *execution.ExecutionConfig, startMS int64, duration int) map[string]any {
 	actionMap := make(map[string]CredamoAnswerAction)
 	for _, a := range actions {
 		actionMap[a.QuestionID] = a
@@ -186,7 +187,7 @@ func typeCodeForKind(kind string) string {
 	return credamoTypeMap[rawQuestionKind(map[string]any{"questionType": kind})]
 }
 
-func forcedChoiceIndex(cfg *models.ExecutionConfig, questionID string, choices []map[string]any) int {
+func forcedChoiceIndex(cfg *execution.ExecutionConfig, questionID string, choices []map[string]any) int {
 	if cfg == nil || questionID == "" {
 		return -1
 	}

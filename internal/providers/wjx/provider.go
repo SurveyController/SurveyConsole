@@ -9,6 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
 )
@@ -94,7 +97,7 @@ func (p *Provider) ParseSurvey(ctx context.Context, surveyURL string) (*models.S
 }
 
 // FillSurveyHTTP submits a single WJX survey response via HTTP.
-func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *models.ExecutionConfig, state *models.ExecutionState, opts models.FillOptions) (bool, error) {
+func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *execution.ExecutionConfig, state *runstate.ExecutionState, opts models.FillOptions) (bool, error) {
 	if state.IsStopped() {
 		return false, nil
 	}
@@ -255,7 +258,7 @@ func buildJqsign(jqnonce string, ktimes int) string {
 	return string(result)
 }
 
-func sampleKtimes(cfg *models.ExecutionConfig) int {
+func sampleKtimes(cfg *execution.ExecutionConfig) int {
 	if cfg.AnswerDurationRangeSeconds[0] > 0 && cfg.AnswerDurationRangeSeconds[1] > 0 {
 		min := cfg.AnswerDurationRangeSeconds[0]
 		max := cfg.AnswerDurationRangeSeconds[1]
@@ -294,7 +297,7 @@ func isSubmissionVerificationResponse(text string) bool {
 	return strings.Contains(text, submitVerificationText)
 }
 
-func classifySubmitError(cfg *models.ExecutionConfig, text string) error {
+func classifySubmitError(cfg *execution.ExecutionConfig, text string) error {
 	if isSubmissionVerificationResponse(text) {
 		return fmt.Errorf("问卷星触发智能验证，当前链路已停止。请启用随机 IP 后再提交")
 	}
@@ -311,7 +314,7 @@ func classifySubmitError(cfg *models.ExecutionConfig, text string) error {
 	return fmt.Errorf("问卷星提交被拒绝: %s", truncate(text, 200))
 }
 
-func questionErrorLabel(cfg *models.ExecutionConfig, questionNumStr string) string {
+func questionErrorLabel(cfg *execution.ExecutionConfig, questionNumStr string) string {
 	var num int
 	fmt.Sscanf(questionNumStr, "%d", &num)
 	if num <= 0 {

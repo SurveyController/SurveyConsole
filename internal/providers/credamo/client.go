@@ -11,11 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+
 	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
 )
 
-func sampleAnswerStartTimeMS(cfg *models.ExecutionConfig, initStartedAtMS int64, durationSeconds int) int64 {
+func sampleAnswerStartTimeMS(cfg *execution.ExecutionConfig, initStartedAtMS int64, durationSeconds int) int64 {
 	if cfg == nil {
 		return initStartedAtMS
 	}

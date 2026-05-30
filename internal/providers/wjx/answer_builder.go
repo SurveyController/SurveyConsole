@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
 	"github.com/SurveyController/SurveyConsole/internal/questions"
@@ -29,7 +32,7 @@ type answerPlan struct {
 }
 
 // buildAnswerActions generates answer actions for all questions in the config.
-func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionState, threadName string) ([]AnswerAction, error) {
+func buildAnswerActions(cfg *execution.ExecutionConfig, state *runstate.ExecutionState, threadName string) ([]AnswerAction, error) {
 	plan, err := buildAnswerPlan(cfg, state, threadName)
 	if err != nil {
 		return nil, err
@@ -40,7 +43,7 @@ func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionStat
 	return plan.Actions, nil
 }
 
-func buildAnswerPlan(cfg *models.ExecutionConfig, state *models.ExecutionState, threadName string) (*answerPlan, error) {
+func buildAnswerPlan(cfg *execution.ExecutionConfig, state *runstate.ExecutionState, threadName string) (*answerPlan, error) {
 	runtime := questions.NewRunContextForThread(cfg, state, threadName)
 	ordered := sortedQuestions(cfg)
 	maxQuestionNum := 0
@@ -91,7 +94,7 @@ func buildAnswerPlan(cfg *models.ExecutionConfig, state *models.ExecutionState, 
 }
 
 // sortedQuestions returns questions sorted by page and num.
-func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
+func sortedQuestions(cfg *execution.ExecutionConfig) []models.SurveyQuestionMeta {
 	questions := make([]models.SurveyQuestionMeta, 0, len(cfg.QuestionsMetadata))
 	for _, q := range cfg.QuestionsMetadata {
 		questions = append(questions, q)
@@ -229,7 +232,7 @@ func selectedIndexSet(action AnswerAction) map[int]bool {
 }
 
 // buildSingleAction builds an answer action for a single question.
-func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, runtime *questions.RunContext) (*AnswerAction, error) {
+func buildSingleAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, runtime *questions.RunContext) (*AnswerAction, error) {
 	typeCode := strings.TrimSpace(meta.TypeCode)
 	questionNum := meta.Num
 
@@ -274,7 +277,7 @@ func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 	}
 }
 
-func buildChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, isDropdown bool, runtime *questions.RunContext) (*AnswerAction, error) {
+func buildChoiceAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, isDropdown bool, runtime *questions.RunContext) (*AnswerAction, error) {
 	optionCount := meta.Options
 	if optionCount <= 0 {
 		optionCount = len(meta.OptionTexts)
@@ -311,7 +314,7 @@ func buildChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 	}, nil
 }
 
-func buildMultipleChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
+func buildMultipleChoiceAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
 	optionCount := meta.Options
 	if optionCount <= 0 {
 		optionCount = len(meta.OptionTexts)
@@ -351,7 +354,7 @@ func buildMultipleChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQu
 	}, nil
 }
 
-func buildMatrixAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
+func buildMatrixAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
 	rows := meta.Rows
 	if rows <= 0 {
 		rows = 1
@@ -384,7 +387,7 @@ func buildMatrixAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 	}, nil
 }
 
-func buildScaleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
+func buildScaleAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
 	optionCount := meta.Options
 	if optionCount <= 0 {
 		optionCount = 5
@@ -410,7 +413,7 @@ func buildScaleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMet
 	}, nil
 }
 
-func buildTextAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
+func buildTextAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int, runtime *questions.RunContext) (*AnswerAction, error) {
 	textValues := []string{""}
 	if text, ok := questions.ChooseConfiguredTextCandidate(cfg, configIdx); ok {
 		textValues = []string{text}
@@ -448,7 +451,7 @@ func splitMultiTextAnswer(answer string, blankCount int) []string {
 	return parts[:blankCount]
 }
 
-func buildSliderAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int) (*AnswerAction, error) {
+func buildSliderAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int) (*AnswerAction, error) {
 	var target float64
 	if configIdx >= 0 && configIdx < len(cfg.SliderTargets) {
 		target = cfg.SliderTargets[configIdx]
@@ -478,7 +481,7 @@ func generateDefaultText(meta models.SurveyQuestionMeta) string {
 	return defaultTexts[rand.Intn(len(defaultTexts))]
 }
 
-func buildOrderAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int) (*AnswerAction, error) {
+func buildOrderAction(cfg *execution.ExecutionConfig, meta models.SurveyQuestionMeta, configIdx int) (*AnswerAction, error) {
 	optionCount := meta.Options
 	if optionCount <= 0 {
 		optionCount = len(meta.OptionTexts)
@@ -505,7 +508,7 @@ func buildOrderAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMet
 }
 
 // resolveChoiceOptionFillText resolves fill text for selected single/dropdown options from config.
-func resolveChoiceOptionFillText(cfg *models.ExecutionConfig, configIdx, selectedIdx int, isDropdown bool) map[int]string {
+func resolveChoiceOptionFillText(cfg *execution.ExecutionConfig, configIdx, selectedIdx int, isDropdown bool) map[int]string {
 	var fillTextsSource [][]*string
 	if isDropdown {
 		fillTextsSource = cfg.DroplistOptionFillTexts
@@ -540,7 +543,7 @@ func resolveSelectedOptionFillTexts(fillTextsSource [][]*string, configIdx int, 
 	return result
 }
 
-func getProbabilities(cfg *models.ExecutionConfig, configIdx int, optionCount int, isDropdown bool) []float64 {
+func getProbabilities(cfg *execution.ExecutionConfig, configIdx int, optionCount int, isDropdown bool) []float64 {
 	probs := make([]float64, optionCount)
 	source := cfg.SingleProb
 	if isDropdown {
@@ -627,7 +630,7 @@ func intSetFromAny(value any) map[int]bool {
 }
 
 // buildSubmitData serializes answer actions into WJX submitdata format.
-func buildSubmitData(actions []AnswerAction, cfg *models.ExecutionConfig) string {
+func buildSubmitData(actions []AnswerAction, cfg *execution.ExecutionConfig) string {
 	var parts []string
 	for _, action := range actions {
 		answer := formatAnswer(action)
@@ -641,7 +644,7 @@ func buildSubmitData(actions []AnswerAction, cfg *models.ExecutionConfig) string
 }
 
 // buildSubmitDataWithSkipped serializes answer actions including skipped questions.
-func buildSubmitDataWithSkipped(actions []AnswerAction, cfg *models.ExecutionConfig, skippedNums []int) string {
+func buildSubmitDataWithSkipped(actions []AnswerAction, cfg *execution.ExecutionConfig, skippedNums []int) string {
 	actionByNum := make(map[int]AnswerAction)
 	for _, a := range actions {
 		actionByNum[a.QuestionNum] = a
@@ -692,7 +695,7 @@ func buildSubmitDataWithSkipped(actions []AnswerAction, cfg *models.ExecutionCon
 }
 
 // skippedAnswer generates a placeholder answer for skipped questions.
-func skippedAnswer(cfg *models.ExecutionConfig, questionNum int) string {
+func skippedAnswer(cfg *execution.ExecutionConfig, questionNum int) string {
 	meta, ok := cfg.QuestionsMetadata[questionNum]
 	if !ok {
 		return "-3"
@@ -760,7 +763,7 @@ func formatAnswer(action AnswerAction) string {
 	return ""
 }
 
-func validateAnswerActions(actions []AnswerAction, cfg *models.ExecutionConfig) error {
+func validateAnswerActions(actions []AnswerAction, cfg *execution.ExecutionConfig) error {
 	for _, action := range actions {
 		meta, ok := cfg.QuestionsMetadata[action.QuestionNum]
 		if !ok {

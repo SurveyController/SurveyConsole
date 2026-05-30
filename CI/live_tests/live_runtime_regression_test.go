@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/config"
 	"github.com/SurveyController/SurveyConsole/internal/engine"
 	"github.com/SurveyController/SurveyConsole/internal/models"
@@ -68,7 +70,7 @@ func TestLiveRuntimeRegression(t *testing.T) {
 	execCfg.RandomProxyIPEnabled = false
 	execCfg.RandomUserAgentEnabled = false
 
-	state := models.NewExecutionState()
+	state := runstate.NewExecutionState()
 	state.Config = execCfg
 
 	err = runner.Run(ctx, execCfg, state)

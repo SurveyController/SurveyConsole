@@ -3,6 +3,9 @@ package wjx
 import (
 	"testing"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
@@ -11,7 +14,7 @@ func TestBuildSingleActionUsesWjxTypeCodeMapping(t *testing.T) {
 	singleCfgIdx := "1"
 	sliderCfgIdx := "2"
 	orderCfgIdx := "3"
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		Texts:         [][]string{{"hello"}, nil, nil, nil},
 		SingleProb:    []any{nil, []float64{0, 1}, nil, nil},
 		SliderTargets: []float64{0, 0, 42, 0},
@@ -28,7 +31,7 @@ func TestBuildSingleActionUsesWjxTypeCodeMapping(t *testing.T) {
 			4: orderCfgIdx,
 		},
 	}
-	state := models.NewExecutionState()
+	state := runstate.NewExecutionState()
 
 	actions, err := buildAnswerActions(cfg, state, "")
 	if err != nil {
@@ -68,7 +71,7 @@ func TestBuildSubmitDataFormatsCommonActions(t *testing.T) {
 }
 
 func TestBuildSubmitDataWithSkippedUsesFrontendPlaceholders(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		QuestionsMetadata: map[int]models.SurveyQuestionMeta{
 			1: {Num: 1, Title: "单选", TypeCode: "3", Options: 2},
 			2: {Num: 2, Title: "排序", TypeCode: "11", Options: 3},
@@ -89,7 +92,7 @@ func TestBuildSubmitDataWithSkippedUsesFrontendPlaceholders(t *testing.T) {
 }
 
 func TestBuildAnswerPlanAppliesDisplayConditions(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		SingleProb: []any{[]float64{1, 0}, nil},
 		Texts:      [][]string{nil, []string{"should skip"}},
 		QuestionConfigIndexMap: map[int]string{
@@ -116,7 +119,7 @@ func TestBuildAnswerPlanAppliesDisplayConditions(t *testing.T) {
 		},
 	}
 
-	plan, err := buildAnswerPlan(cfg, models.NewExecutionState(), "")
+	plan, err := buildAnswerPlan(cfg, runstate.NewExecutionState(), "")
 	if err != nil {
 		t.Fatalf("buildAnswerPlan returned error: %v", err)
 	}
@@ -129,7 +132,7 @@ func TestBuildAnswerPlanAppliesDisplayConditions(t *testing.T) {
 }
 
 func TestBuildAnswerPlanAppliesForwardJumpRules(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		SingleProb: []any{[]float64{1, 0}, nil, nil, nil},
 		Texts:      [][]string{nil, []string{"skip 2"}, []string{"skip 3"}, []string{"answer 4"}},
 		QuestionConfigIndexMap: map[int]string{
@@ -155,7 +158,7 @@ func TestBuildAnswerPlanAppliesForwardJumpRules(t *testing.T) {
 		},
 	}
 
-	plan, err := buildAnswerPlan(cfg, models.NewExecutionState(), "")
+	plan, err := buildAnswerPlan(cfg, runstate.NewExecutionState(), "")
 	if err != nil {
 		t.Fatalf("buildAnswerPlan returned error: %v", err)
 	}
@@ -168,7 +171,7 @@ func TestBuildAnswerPlanAppliesForwardJumpRules(t *testing.T) {
 }
 
 func TestSampleKtimesAllowsFixedConfiguredRange(t *testing.T) {
-	cfg := &models.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{12, 12}}
+	cfg := &execution.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{12, 12}}
 	if got := sampleKtimes(cfg); got != 12 {
 		t.Fatalf("sampleKtimes fixed range = %d, want 12", got)
 	}

@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
 )
@@ -95,7 +98,7 @@ func TestBuildSubmitBodyCoversRawCredamoAPIShape(t *testing.T) {
 		{QuestionID: "105", QuestionType: "text", TextValue: "你好"},
 	}
 
-	body := buildSubmitBody("demo", rawQuestions, actions, &models.ExecutionConfig{}, 1000, 50)
+	body := buildSubmitBody("demo", rawQuestions, actions, &execution.ExecutionConfig{}, 1000, 50)
 	if body["answerStartTime"] != int64(1000) || body["answerEndTime"] != int64(51000) {
 		t.Fatalf("body timing = %#v/%#v, want 1000/51000", body["answerStartTime"], body["answerEndTime"])
 	}
@@ -149,7 +152,7 @@ func TestCredamoForcedChoicePrefersTextWhenAPIChoiceOrderChanges(t *testing.T) {
 		t.Fatalf("forced choice = index %v text %q, want index 2 text 200", questions[0].ForcedOptionIndex, questions[0].ForcedOptionText)
 	}
 
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		QuestionsMetadata: map[int]models.SurveyQuestionMeta{
 			8: {Num: 8, ProviderQuestionID: "108", ForcedOptionIndex: intPtr(1), ForcedOptionText: "200"},
 		},
@@ -173,14 +176,14 @@ func TestComputeSignatureUsesUppercaseDoubleSHA1(t *testing.T) {
 }
 
 func TestSampleAnswerDurationSecondsAllowsFixedConfiguredRange(t *testing.T) {
-	cfg := &models.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{30, 30}}
+	cfg := &execution.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{30, 30}}
 	if got := providerutil.SampleAnswerDurationSeconds(cfg, 9, 16); got != 30 {
 		t.Fatalf("sampleAnswerDurationSeconds fixed range = %d, want 30", got)
 	}
 }
 
 func TestBuildAnswerActionsRejectsUnsupportedCredamoQuestion(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		QuestionsMetadata: map[int]models.SurveyQuestionMeta{
 			1: {
 				Num:                1,
@@ -193,7 +196,7 @@ func TestBuildAnswerActionsRejectsUnsupportedCredamoQuestion(t *testing.T) {
 		},
 	}
 
-	_, err := buildAnswerActions(cfg, models.NewExecutionState(), "")
+	_, err := buildAnswerActions(cfg, runstate.NewExecutionState(), "")
 	var unsupported *providerutil.UnsupportedQuestionError
 	if !errors.As(err, &unsupported) {
 		t.Fatalf("error = %#v, want UnsupportedQuestionError", err)
@@ -201,7 +204,7 @@ func TestBuildAnswerActionsRejectsUnsupportedCredamoQuestion(t *testing.T) {
 }
 
 func TestSampleAnswerStartTimeUsesCredamoDatetimeWindow(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		SurveyProvider:             models.ProviderCredamo,
 		AnswerDatetimeWindowMS:     [2]int64{1710000000000, 1710003600000},
 		AnswerDurationRangeSeconds: [2]int{70, 70},
@@ -215,7 +218,7 @@ func TestSampleAnswerStartTimeUsesCredamoDatetimeWindow(t *testing.T) {
 }
 
 func TestSampleAnswerStartTimeFallsBackToInitTimeWhenWindowMissing(t *testing.T) {
-	cfg := &models.ExecutionConfig{SurveyProvider: models.ProviderCredamo}
+	cfg := &execution.ExecutionConfig{SurveyProvider: models.ProviderCredamo}
 
 	startedAt := sampleAnswerStartTimeMS(cfg, 1700000000000, 70)
 
@@ -231,7 +234,7 @@ func TestProviderConfigIndexPrefersFullKeyAndFallsBackToBareID(t *testing.T) {
 		ProviderQuestionID: "q1",
 	}
 	fullKey := models.MakeProviderQuestionKey(ProviderName, "page-1", "q1")
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		ProviderQuestionConfigIndexMap: map[string]string{
 			"q1":    "1",
 			fullKey: "2",

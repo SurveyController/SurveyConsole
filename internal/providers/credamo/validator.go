@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyConsole/internal/execution"
 )
 
-func validateCredamoActions(actions []CredamoAnswerAction, cfg *models.ExecutionConfig) error {
+func validateCredamoActions(actions []CredamoAnswerAction, cfg *execution.ExecutionConfig) error {
 	for _, action := range actions {
 		meta, ok := cfg.ProviderQuestionMetadataMap[action.QuestionID]
 		if !ok {

@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 	"github.com/xuri/excelize/v2"
 )
 
 // ExportRunReport exports a run report to an Excel file.
-func ExportRunReport(filePath string, cfg *models.RuntimeConfig, state *models.ExecutionState, questions []models.SurveyQuestionMeta) error {
+func ExportRunReport(filePath string, cfg *models.RuntimeConfig, state *runstate.ExecutionState, questions []models.SurveyQuestionMeta) error {
 	f := excelize.NewFile()
 	defer f.Close()
 
@@ -28,7 +30,7 @@ func ExportRunReport(filePath string, cfg *models.RuntimeConfig, state *models.E
 	return f.SaveAs(filePath)
 }
 
-func writeSummarySheet(f *excelize.File, cfg *models.RuntimeConfig, state *models.ExecutionState) {
+func writeSummarySheet(f *excelize.File, cfg *models.RuntimeConfig, state *runstate.ExecutionState) {
 	sheetName := "运行摘要"
 	f.NewSheet(sheetName)
 	f.DeleteSheet("Sheet1")
@@ -94,7 +96,7 @@ func writeQuestionsSheet(f *excelize.File, questions []models.SurveyQuestionMeta
 	f.SetColWidth(sheetName, "G", "G", 10)
 }
 
-func writeThreadProgressSheet(f *excelize.File, state *models.ExecutionState) {
+func writeThreadProgressSheet(f *excelize.File, state *runstate.ExecutionState) {
 	sheetName := "线程进度"
 	f.NewSheet(sheetName)
 

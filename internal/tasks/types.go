@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/engine"
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
@@ -19,15 +21,15 @@ const (
 
 // TaskRecord is the persisted task state.
 type TaskRecord struct {
-	ID          string                 `json:"id"`
-	Status      string                 `json:"status"`
-	Config      *models.RuntimeConfig  `json:"config"`
-	State       *models.ExecutionState `json:"state,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	StartedAt   *time.Time             `json:"started_at,omitempty"`
-	FinishedAt  *time.Time             `json:"finished_at,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	StopMessage string                 `json:"stop_message,omitempty"`
+	ID          string                   `json:"id"`
+	Status      string                   `json:"status"`
+	Config      *models.RuntimeConfig    `json:"config"`
+	State       *runstate.ExecutionState `json:"state,omitempty"`
+	CreatedAt   time.Time                `json:"created_at"`
+	StartedAt   *time.Time               `json:"started_at,omitempty"`
+	FinishedAt  *time.Time               `json:"finished_at,omitempty"`
+	Error       string                   `json:"error,omitempty"`
+	StopMessage string                   `json:"stop_message,omitempty"`
 }
 
 // TaskLog is one pure JSONL task log entry.

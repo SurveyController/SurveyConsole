@@ -9,11 +9,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SurveyController/SurveyConsole/internal/execution"
+	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+
 	"github.com/SurveyController/SurveyConsole/internal/models"
 )
 
 func TestRunContextAppliesConsistencyRules(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		AnswerRules: []map[string]any{
 			{
 				"condition_question_num":   1,
@@ -25,7 +28,7 @@ func TestRunContextAppliesConsistencyRules(t *testing.T) {
 			},
 		},
 	}
-	state := models.NewExecutionState()
+	state := runstate.NewExecutionState()
 	runtime := NewRunContext(cfg, state)
 
 	first := runtime.ChooseSingle(models.SurveyQuestionMeta{Num: 1, Options: 2}, 0, 2, []float64{1, 0}, nil)
@@ -39,7 +42,7 @@ func TestRunContextAppliesConsistencyRules(t *testing.T) {
 }
 
 func TestRunContextAppliesMultipleConstraints(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		AnswerRules: []map[string]any{
 			{
 				"condition_question_num":   1,
@@ -51,7 +54,7 @@ func TestRunContextAppliesMultipleConstraints(t *testing.T) {
 			},
 		},
 	}
-	runtime := NewRunContext(cfg, models.NewExecutionState())
+	runtime := NewRunContext(cfg, runstate.NewExecutionState())
 
 	runtime.ChooseSingle(models.SurveyQuestionMeta{Num: 1, Options: 2}, 0, 2, []float64{1, 0}, nil)
 	selected := runtime.ChooseMultiple(models.SurveyQuestionMeta{Num: 2, Options: 4}, 1, 4, 1, 2, []float64{1, 1, 0, 1})
@@ -68,11 +71,11 @@ func TestRunContextAppliesMultipleConstraints(t *testing.T) {
 }
 
 func TestRunContextGeneratesFreeAIText(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		AIMode:      "free",
 		TextAIFlags: []bool{true},
 	}
-	runtime := NewRunContext(cfg, models.NewExecutionState())
+	runtime := NewRunContext(cfg, runstate.NewExecutionState())
 
 	got := runtime.GenerateText(models.SurveyQuestionMeta{Num: 1, Title: "评价"}, 0, "fallback", 1)
 	if got == "fallback" || got == "" {
@@ -120,13 +123,13 @@ func TestAIClientClassifiesConfigErrorWithoutRetry(t *testing.T) {
 }
 
 func TestRunContextGeneratesConfiguredRandomTextModes(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		AIMode:              "free",
 		TextAIFlags:         []bool{true, true, false},
 		TextRandomModes:     []string{models.TextRandomMobile, models.TextRandomInteger, ""},
 		TextRandomIntRanges: [][]int{nil, []int{12, 10}, nil},
 	}
-	runtime := NewRunContext(cfg, models.NewExecutionState())
+	runtime := NewRunContext(cfg, runstate.NewExecutionState())
 
 	mobile := runtime.GenerateText(models.SurveyQuestionMeta{Num: 1, Title: "电话"}, 0, "fallback", 1)
 	if !regexp.MustCompile(`^1\d{10}$`).MatchString(mobile) {
@@ -146,12 +149,12 @@ func TestRunContextGeneratesConfiguredRandomTextModes(t *testing.T) {
 }
 
 func TestRunContextGeneratesConfiguredMultiTextAndLocation(t *testing.T) {
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		MultiTextBlankModes:     [][]string{{models.TextRandomNone, models.TextRandomMobile, models.TextRandomInteger}},
 		MultiTextBlankIntRanges: [][][]int{{nil, nil, []int{5, 5}}},
 		LocationParts:           map[int][]string{9: []string{"上海", "浦东新区"}},
 	}
-	runtime := NewRunContext(cfg, models.NewExecutionState())
+	runtime := NewRunContext(cfg, runstate.NewExecutionState())
 
 	got := runtime.GenerateText(models.SurveyQuestionMeta{Num: 1, Title: "多项填空"}, 0, "原值", 3)
 	parts := strings.Split(got, "|")
@@ -180,7 +183,7 @@ func TestRunContextGeneratesConfiguredMultiTextAndLocation(t *testing.T) {
 
 func TestRunContextUsesReverseFillSampleForThread(t *testing.T) {
 	choice := 1
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		TargetNum: 1,
 		ReverseFillSpec: &models.ReverseFillSpec{
 			Samples: []models.ReverseFillSampleRow{
@@ -195,7 +198,7 @@ func TestRunContextUsesReverseFillSampleForThread(t *testing.T) {
 			},
 		},
 	}
-	state := models.NewExecutionState()
+	state := runstate.NewExecutionState()
 	state.Config = cfg
 	state.InitializeReverseFillRuntime()
 	if acquired := state.AcquireReverseFillSample("Worker-1"); acquired.Status != "acquired" {
@@ -220,7 +223,7 @@ func TestRunContextUsesReverseFillSampleForThread(t *testing.T) {
 
 func TestBuildPsychometricPlanFromConfigUsesBiasAndOrdinalScores(t *testing.T) {
 	dim := "体验"
-	cfg := &models.ExecutionConfig{
+	cfg := &execution.ExecutionConfig{
 		PsychoTargetAlpha: 0.85,
 		QuestionDimensionMap: map[int]*string{
 			1: &dim,
