@@ -34,6 +34,9 @@ func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionStat
 	if err != nil {
 		return nil, err
 	}
+	if err := validateAnswerActions(plan.Actions, cfg); err != nil {
+		return nil, err
+	}
 	return plan.Actions, nil
 }
 
@@ -258,9 +261,16 @@ func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 		return buildMatrixAction(cfg, meta, configIdx, runtime)
 	case "11", "12": // Order / ranking
 		return buildOrderAction(cfg, meta, configIdx)
-	default:
-		// Skip unsupported types
+	case "0": // Description
 		return nil, nil
+	default:
+		return nil, &providerutil.UnsupportedQuestionError{
+			Provider:     ProviderName,
+			QuestionNum:  meta.Num,
+			TypeCode:     typeCode,
+			ProviderType: meta.ProviderType,
+			Reason:       meta.UnsupportedReason,
+		}
 	}
 }
 
@@ -291,7 +301,7 @@ func buildChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 	selectedIdx := runtime.ChooseSingle(meta, configIdx, optionCount, probs, nil)
 
 	// Resolve option fill text
-	fillTexts := resolveOptionFillText(cfg, configIdx, selectedIdx, isDropdown)
+	fillTexts := resolveChoiceOptionFillText(cfg, configIdx, selectedIdx, isDropdown)
 
 	return &AnswerAction{
 		QuestionNum:     meta.Num,
@@ -331,11 +341,13 @@ func buildMultipleChoiceAction(cfg *models.ExecutionConfig, meta models.SurveyQu
 	}
 
 	selected := runtime.ChooseMultiple(meta, configIdx, optionCount, minLimit, maxLimit, probs)
+	fillTexts := resolveSelectedOptionFillTexts(cfg.MultipleOptionFillTexts, configIdx, selected)
 
 	return &AnswerAction{
 		QuestionNum:     meta.Num,
 		Kind:            "choice",
 		SelectedIndices: selected,
+		OptionFillTexts: fillTexts,
 	}, nil
 }
 
@@ -492,30 +504,40 @@ func buildOrderAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMet
 	}, nil
 }
 
-// resolveOptionFillText resolves fill text for selected options from config.
-func resolveOptionFillText(cfg *models.ExecutionConfig, configIdx, selectedIdx int, isDropdown bool) map[int]string {
+// resolveChoiceOptionFillText resolves fill text for selected single/dropdown options from config.
+func resolveChoiceOptionFillText(cfg *models.ExecutionConfig, configIdx, selectedIdx int, isDropdown bool) map[int]string {
 	var fillTextsSource [][]*string
 	if isDropdown {
 		fillTextsSource = cfg.DroplistOptionFillTexts
 	} else {
 		fillTextsSource = cfg.SingleOptionFillTexts
 	}
+	return resolveSelectedOptionFillTexts(fillTextsSource, configIdx, []int{selectedIdx})
+}
 
+func resolveSelectedOptionFillTexts(fillTextsSource [][]*string, configIdx int, selected []int) map[int]string {
 	if configIdx < 0 || configIdx >= len(fillTextsSource) {
 		return nil
 	}
-
 	fillEntries := fillTextsSource[configIdx]
-	if fillEntries == nil || selectedIdx >= len(fillEntries) {
+	if len(fillEntries) == 0 {
 		return nil
 	}
-
-	fillValue := fillEntries[selectedIdx]
-	if fillValue == nil || *fillValue == "" {
+	result := make(map[int]string)
+	for _, selectedIdx := range selected {
+		if selectedIdx < 0 || selectedIdx >= len(fillEntries) {
+			continue
+		}
+		fillValue := fillEntries[selectedIdx]
+		if fillValue == nil || strings.TrimSpace(*fillValue) == "" {
+			continue
+		}
+		result[selectedIdx] = strings.TrimSpace(*fillValue)
+	}
+	if len(result) == 0 {
 		return nil
 	}
-
-	return map[int]string{selectedIdx: *fillValue}
+	return result
 }
 
 func getProbabilities(cfg *models.ExecutionConfig, configIdx int, optionCount int, isDropdown bool) []float64 {
@@ -736,6 +758,61 @@ func formatAnswer(action AnswerAction) string {
 		return strings.Join(parts, ",")
 	}
 	return ""
+}
+
+func validateAnswerActions(actions []AnswerAction, cfg *models.ExecutionConfig) error {
+	for _, action := range actions {
+		meta, ok := cfg.QuestionsMetadata[action.QuestionNum]
+		if !ok {
+			continue
+		}
+		optionCount := meta.Options
+		if optionCount <= 0 {
+			optionCount = len(meta.OptionTexts)
+		}
+		switch action.Kind {
+		case "choice", "select":
+			if len(action.SelectedIndices) == 0 {
+				return fmt.Errorf("问卷星第%d题答案为空", action.QuestionNum)
+			}
+			for _, idx := range action.SelectedIndices {
+				if idx < 0 || (optionCount > 0 && idx >= optionCount) {
+					return fmt.Errorf("问卷星第%d题选项越界: %d", action.QuestionNum, idx)
+				}
+			}
+		case "text":
+			if len(action.TextValues) == 0 {
+				return fmt.Errorf("问卷星第%d题填空为空", action.QuestionNum)
+			}
+			for _, text := range action.TextValues {
+				if strings.TrimSpace(text) == "" {
+					return fmt.Errorf("问卷星第%d题填空包含空值", action.QuestionNum)
+				}
+			}
+		case "matrix":
+			rows := meta.Rows
+			if rows <= 0 {
+				rows = 1
+			}
+			if len(action.MatrixIndices) != rows {
+				return fmt.Errorf("问卷星第%d题矩阵行数不完整: got=%d want=%d", action.QuestionNum, len(action.MatrixIndices), rows)
+			}
+			for row, idx := range action.MatrixIndices {
+				if idx < 0 || (optionCount > 0 && idx >= optionCount) {
+					return fmt.Errorf("问卷星第%d题第%d行选项越界: %d", action.QuestionNum, row+1, idx)
+				}
+			}
+		case "slider":
+			if action.SliderValue == nil {
+				return fmt.Errorf("问卷星第%d题滑块答案为空", action.QuestionNum)
+			}
+		case "order":
+			if optionCount > 0 && len(action.SelectedIndices) != optionCount {
+				return fmt.Errorf("问卷星第%d题排序答案不完整", action.QuestionNum)
+			}
+		}
+	}
+	return nil
 }
 
 // formatSelectedIndicesWithFill formats indices with optional fill text (e.g., "1!custom text|2").

@@ -15,6 +15,7 @@ type PsychometricItem struct {
 	Bias          string // "left", "center", "right"
 	IsReversed    bool
 	ScoreByChoice []float64 // score mapping for each choice
+	TargetProb    []float64
 }
 
 // PsychometricPlan holds pre-generated answers for a single dimension.
@@ -64,11 +65,16 @@ func BuildPsychometricPlan(items []PsychometricItem, targetAlpha float64) *Psych
 	theta := rand.NormFloat64()
 
 	choices := make(map[string]int)
+	orientation := inferDimensionOrientation(items)
 	for _, item := range items {
-		score := generatePsychoAnswer(theta, item.OptionCount, item.Bias, sigmaE, item.IsReversed)
+		key := choiceKey(item.QuestionIndex, item.RowIndex)
+		itemDirection := orientation.ItemDirections[key]
+		if itemDirection == "" {
+			itemDirection = item.Bias
+		}
+		score := generatePsychoAnswer(theta, item.OptionCount, itemDirection, sigmaE, orientation.ReversedKeys[key] || item.IsReversed)
 		// Apply score_by_choice mapping if available
 		choice := mapScoreToChoice(score, item)
-		key := choiceKey(item.QuestionIndex, item.RowIndex)
 		choices[key] = choice
 	}
 
@@ -95,6 +101,138 @@ func BuildDimensionPsychometricPlan(groupedItems map[string][]PsychometricItem, 
 		return nil
 	}
 	return &DimensionPsychometricPlan{Plans: plans}
+}
+
+type dimensionOrientation struct {
+	ItemDirections map[string]string
+	ReversedKeys   map[string]bool
+}
+
+func inferDimensionOrientation(items []PsychometricItem) dimensionOrientation {
+	result := dimensionOrientation{
+		ItemDirections: make(map[string]string),
+		ReversedKeys:   make(map[string]bool),
+	}
+	leftStrength := 0.0
+	rightStrength := 0.0
+	strengths := make(map[string]float64)
+	for _, item := range items {
+		key := choiceKey(item.QuestionIndex, item.RowIndex)
+		direction, strength := itemDirection(item)
+		result.ItemDirections[key] = direction
+		strengths[key] = strength
+		switch direction {
+		case "left":
+			leftStrength += strength
+		case "right":
+			rightStrength += strength
+		}
+	}
+
+	anchor := "center"
+	anchorStrength := leftStrength
+	weakerStrength := rightStrength
+	if rightStrength > leftStrength {
+		anchor = "right"
+		anchorStrength = rightStrength
+		weakerStrength = leftStrength
+	} else if leftStrength > rightStrength {
+		anchor = "left"
+	}
+	ambiguous := anchor == "center" || anchorStrength < 0.2 || anchorStrength <= weakerStrength*1.15
+	if ambiguous {
+		return result
+	}
+	for key, direction := range result.ItemDirections {
+		if strengths[key] <= 0 {
+			continue
+		}
+		if (direction == "left" || direction == "right") && direction != anchor {
+			result.ReversedKeys[key] = true
+		}
+	}
+	return result
+}
+
+func itemDirection(item PsychometricItem) (string, float64) {
+	probs := normalizePsychometricProbabilities(item.TargetProb, item.OptionCount)
+	if len(probs) == 0 {
+		probs = buildBiasTargetProbabilities(item.OptionCount, item.Bias)
+	}
+	denom := float64(maxInt(item.OptionCount-1, 1))
+	mean := 0.5
+	if denom > 0 {
+		weighted := 0.0
+		for idx, value := range probs {
+			weighted += float64(idx) * value
+		}
+		mean = math.Max(0, math.Min(1, weighted/denom))
+	}
+	if mean <= 0.4 {
+		return "left", math.Abs(mean - 0.5)
+	}
+	if mean >= 0.6 {
+		return "right", math.Abs(mean - 0.5)
+	}
+	return "center", math.Abs(mean - 0.5)
+}
+
+func normalizePsychometricProbabilities(values []float64, optionCount int) []float64 {
+	if optionCount <= 0 {
+		return nil
+	}
+	result := make([]float64, optionCount)
+	total := 0.0
+	for i := 0; i < optionCount && i < len(values); i++ {
+		value := math.Max(0, values[i])
+		if math.IsNaN(value) || math.IsInf(value, 0) {
+			value = 0
+		}
+		result[i] = value
+		total += value
+	}
+	if total <= 0 {
+		return nil
+	}
+	for i := range result {
+		result[i] /= total
+	}
+	return result
+}
+
+func buildBiasTargetProbabilities(optionCount int, bias string) []float64 {
+	if optionCount <= 1 {
+		optionCount = 2
+	}
+	if optionCount == 2 {
+		switch bias {
+		case "left":
+			return []float64{0.75, 0.25}
+		case "right":
+			return []float64{0.25, 0.75}
+		default:
+			return []float64{0.5, 0.5}
+		}
+	}
+	raw := make([]float64, optionCount)
+	center := float64(optionCount-1) / 2
+	power := 8.0
+	if bias == "center" {
+		power = 3
+	}
+	for i := range raw {
+		var linear float64
+		switch bias {
+		case "left":
+			linear = 1.0 - float64(i)/float64(optionCount-1)
+		case "right":
+			linear = float64(i) / float64(optionCount-1)
+		default:
+			linear = 1.0 - math.Abs(float64(i)-center)/math.Max(center, 1)
+		}
+		raw[i] = math.Pow(math.Max(linear, 0), power)
+	}
+	return normalizePsychometricProbabilities(raw, optionCount)
 }
 
 func computeRhoFromAlpha(alpha float64, k int) float64 {
@@ -162,6 +300,13 @@ func abs(x int) int {
 		return -x
 	}
 	return x
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func zToCategory(z float64, optionCount int) int {

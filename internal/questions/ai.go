@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+const (
+	aiRequestTimeout = 12 * time.Second
+	aiMaxAttempts    = 4
+	aiRetryBackoff   = 400 * time.Millisecond
+)
+
 // AIConfig holds AI generation configuration.
 type AIConfig struct {
 	Mode         string // "free", "api"
@@ -26,11 +32,39 @@ type AIClient struct {
 	client *http.Client
 }
 
+// AIError classifies an AI generation failure for callers and tests.
+type AIError struct {
+	Kind string
+	Err  error
+}
+
+func (e *AIError) Error() string {
+	if e == nil || e.Err == nil {
+		return "AI 调用失败"
+	}
+	return fmt.Sprintf("AI %s: %v", e.Kind, e.Err)
+}
+
+func (e *AIError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
+const (
+	AIErrorConfig   = "config"
+	AIErrorTimeout  = "timeout"
+	AIErrorHTTP     = "http"
+	AIErrorResponse = "response"
+	AIErrorNetwork  = "network"
+)
+
 // NewAIClient creates a new AI client.
 func NewAIClient(config AIConfig) *AIClient {
 	return &AIClient{
 		config: config,
-		client: &http.Client{Timeout: 30 * time.Second},
+		client: &http.Client{Timeout: aiRequestTimeout},
 	}
 }
 
@@ -57,7 +91,7 @@ func (a *AIClient) generateFree(questionTitle, questionType string, blankCount i
 
 func (a *AIClient) generateAPI(questionTitle, questionType string, blankCount int) (string, error) {
 	if a.config.APIKey == "" {
-		return "", fmt.Errorf("AI API key 未配置")
+		return "", classifyAIError(AIErrorConfig, fmt.Errorf("API key 未配置"))
 	}
 
 	prompt := a.buildPrompt(questionTitle, questionType, blankCount)
@@ -85,27 +119,50 @@ func (a *AIClient) generateAPI(questionTitle, questionType string, blankCount in
 		"max_tokens":  200,
 	}
 
+	var lastErr error
+	for attempt := 1; attempt <= aiMaxAttempts; attempt++ {
+		answer, err := a.doGenerateAPI(baseURL, reqBody)
+		if err == nil {
+			return answer, nil
+		}
+		lastErr = err
+		if attempt >= aiMaxAttempts || !isRetryableAIError(err) {
+			break
+		}
+		time.Sleep(aiRetryBackoff)
+	}
+	return "", lastErr
+}
+
+func (a *AIClient) doGenerateAPI(baseURL string, reqBody map[string]any) (string, error) {
 	bodyBytes, _ := json.Marshal(reqBody)
-	req, err := http.NewRequest("POST", baseURL+"/chat/completions", bytes.NewReader(bodyBytes))
+	req, err := http.NewRequest("POST", strings.TrimRight(baseURL, "/")+"/chat/completions", bytes.NewReader(bodyBytes))
 	if err != nil {
-		return "", err
+		return "", classifyAIError(AIErrorConfig, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+a.config.APIKey)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("AI 请求失败: %w", err)
+		if isTimeoutError(err) {
+			return "", classifyAIError(AIErrorTimeout, err)
+		}
+		return "", classifyAIError(AIErrorNetwork, err)
 	}
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("AI HTTP %d: %s", resp.StatusCode, truncateString(string(respBody), 200))
+		kind := AIErrorHTTP
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			kind = AIErrorConfig
+		}
+		return "", classifyAIError(kind, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(string(respBody), 200)))
 	}
 	var result map[string]any
 	if err := json.Unmarshal(respBody, &result); err != nil {
-		return "", fmt.Errorf("解析 AI 响应失败: %w", err)
+		return "", classifyAIError(AIErrorResponse, err)
 	}
 
 	// Extract content from response
@@ -119,7 +176,35 @@ func (a *AIClient) generateAPI(questionTitle, questionType string, blankCount in
 		}
 	}
 
-	return "", fmt.Errorf("AI 响应格式错误")
+	return "", classifyAIError(AIErrorResponse, fmt.Errorf("响应格式错误"))
+}
+
+func classifyAIError(kind string, err error) error {
+	return &AIError{Kind: kind, Err: err}
+}
+
+func isRetryableAIError(err error) bool {
+	if err == nil {
+		return false
+	}
+	aiErr, ok := err.(*AIError)
+	if !ok {
+		return true
+	}
+	switch aiErr.Kind {
+	case AIErrorConfig, AIErrorResponse:
+		return false
+	default:
+		return true
+	}
+}
+
+func isTimeoutError(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "timeout") || strings.Contains(text, "timed out") || strings.Contains(text, "超时")
 }
 
 func truncateString(s string, n int) string {

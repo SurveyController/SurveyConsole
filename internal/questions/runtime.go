@@ -598,6 +598,7 @@ func buildPsychometricPlanFromConfig(cfg *models.ExecutionConfig) *DimensionPsyc
 		scoreByChoice := scoreMapToFloat64(cfg.QuestionOrdinalScoreMap[meta.Num])
 		dimension := strings.TrimSpace(*dimensionPtr)
 		bias := psychometricBiasFromConfig(cfg.QuestionPsychoBiasMap[meta.Num])
+		targetProb := psychometricTargetProbabilities(cfg, meta, cfg.QuestionConfigIndexMap[meta.Num], optionCount, nil)
 		if meta.TypeCode == "6" && meta.Rows > 0 {
 			for row := 0; row < meta.Rows; row++ {
 				rowIndex := row
@@ -608,6 +609,7 @@ func buildPsychometricPlanFromConfig(cfg *models.ExecutionConfig) *DimensionPsyc
 					OptionCount:   optionCount,
 					Bias:          bias,
 					ScoreByChoice: scoreByChoice,
+					TargetProb:    psychometricTargetProbabilities(cfg, meta, cfg.QuestionConfigIndexMap[meta.Num], optionCount, &rowIndex),
 				})
 			}
 			continue
@@ -618,9 +620,109 @@ func buildPsychometricPlanFromConfig(cfg *models.ExecutionConfig) *DimensionPsyc
 			OptionCount:   optionCount,
 			Bias:          bias,
 			ScoreByChoice: scoreByChoice,
+			TargetProb:    targetProb,
 		})
 	}
 	return BuildDimensionPsychometricPlan(grouped, cfg.PsychoTargetAlpha)
+}
+
+func psychometricTargetProbabilities(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, rawConfigIdx string, optionCount int, rowIndex *int) []float64 {
+	if cfg == nil || optionCount <= 0 {
+		return nil
+	}
+	configIdx := -1
+	if strings.TrimSpace(rawConfigIdx) != "" {
+		if parsed, err := strconv.Atoi(strings.TrimSpace(rawConfigIdx)); err == nil {
+			configIdx = parsed
+		}
+	}
+	if configIdx < 0 {
+		return nil
+	}
+	switch meta.TypeCode {
+	case "3", "33", "34":
+		if configIdx < len(cfg.SingleProb) {
+			return float64SliceForOptionCount(cfg.SingleProb[configIdx], optionCount)
+		}
+	case "5":
+		if configIdx < len(cfg.ScaleProb) {
+			return float64SliceForOptionCount(cfg.ScaleProb[configIdx], optionCount)
+		}
+	case "7", "35":
+		if configIdx < len(cfg.DroplistProb) {
+			return float64SliceForOptionCount(cfg.DroplistProb[configIdx], optionCount)
+		}
+	case "6":
+		if configIdx < len(cfg.MatrixProb) {
+			row := 0
+			if rowIndex != nil {
+				row = *rowIndex
+			}
+			return matrixProbabilitiesForOptionCount(cfg.MatrixProb[configIdx], row, optionCount)
+		}
+	}
+	return nil
+}
+
+func float64SliceForOptionCount(raw any, optionCount int) []float64 {
+	values := make([]float64, optionCount)
+	switch typed := raw.(type) {
+	case []float64:
+		copy(values, typed)
+	case []any:
+		for i := 0; i < optionCount && i < len(typed); i++ {
+			values[i] = floatFromAny(typed[i])
+		}
+	default:
+		return nil
+	}
+	if allZeroFloat64(values) {
+		return nil
+	}
+	return values
+}
+
+func matrixProbabilitiesForOptionCount(raw any, rowIndex, optionCount int) []float64 {
+	switch typed := raw.(type) {
+	case [][]float64:
+		if rowIndex < len(typed) {
+			return float64SliceForOptionCount(typed[rowIndex], optionCount)
+		}
+	case []any:
+		if rowIndex < len(typed) {
+			if row := float64SliceForOptionCount(typed[rowIndex], optionCount); len(row) > 0 {
+				return row
+			}
+		}
+		return float64SliceForOptionCount(typed, optionCount)
+	default:
+		return float64SliceForOptionCount(raw, optionCount)
+	}
+	return nil
+}
+
+func floatFromAny(v any) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case float32:
+		return float64(n)
+	case int:
+		return float64(n)
+	case int64:
+		return float64(n)
+	default:
+		return 0
+	}
+}
+
+func allZeroFloat64(values []float64) bool {
+	for _, value := range values {
+		if value != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func psychometricBiasFromConfig(raw string) string {

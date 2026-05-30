@@ -86,7 +86,10 @@ func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *models.ExecutionConf
 	cookieHeader = mergeCookieHeaders(cookieHeader, initCookieHeader)
 
 	// Build actions
-	actions := buildAnswerActions(cfg, state, opts.ThreadName)
+	actions, err := buildAnswerActions(cfg, state, opts.ThreadName)
+	if err != nil {
+		return false, err
+	}
 
 	// Build submit body
 	duration := providerutil.SampleAnswerDurationSeconds(cfg, 9, 16)
@@ -399,6 +402,21 @@ var credamoTypeMap = map[string]string{
 	"description":     "0",
 }
 
+var credamoSupportedProviderTypes = map[string]bool{
+	"single_choice":   true,
+	"single":          true,
+	"multiple_choice": true,
+	"multiple":        true,
+	"scale":           true,
+	"matrix":          true,
+	"dropdown":        true,
+	"ordering":        true,
+	"order":           true,
+	"text":            true,
+	"textarea":        true,
+	"description":     true,
+}
+
 func standardizeQuestions(raw []map[string]any) []models.SurveyQuestionMeta {
 	var result []models.SurveyQuestionMeta
 	num := 1
@@ -407,7 +425,7 @@ func standardizeQuestions(raw []map[string]any) []models.SurveyQuestionMeta {
 		providerType := rawQuestionKind(q)
 		typeCode := credamoTypeMap[providerType]
 		if typeCode == "" {
-			typeCode = "1"
+			typeCode = "0"
 		}
 
 		questionNum := rawQuestionNum(q, num)
@@ -454,6 +472,10 @@ func standardizeQuestions(raw []map[string]any) []models.SurveyQuestionMeta {
 			ProviderType:       providerType,
 			ForcedOptionIndex:  forcedIdx,
 			ForcedOptionText:   forcedText,
+			Unsupported:        !credamoSupportedProviderTypes[providerType],
+		}
+		if qm.Unsupported {
+			qm.UnsupportedReason = fmt.Sprintf("暂不支持 Credamo 题型：%s", providerType)
 		}
 
 		if minLimit != nil {
@@ -588,16 +610,22 @@ func extractMultiSelectLimits(title string, optionCount int) (*int, *int) {
 	return minLimit, maxLimit
 }
 
-func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionState, threadName string) []CredamoAnswerAction {
+func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionState, threadName string) ([]CredamoAnswerAction, error) {
 	runtime := questions.NewRunContextForThread(cfg, state, threadName)
 	var actions []CredamoAnswerAction
 	for _, meta := range sortedQuestions(cfg) {
-		action := buildSingleAction(cfg, meta, runtime)
+		action, err := buildSingleAction(cfg, meta, runtime)
+		if err != nil {
+			return nil, err
+		}
 		if action != nil {
 			actions = append(actions, *action)
 		}
 	}
-	return actions
+	if err := validateCredamoActions(actions, cfg); err != nil {
+		return nil, err
+	}
+	return actions, nil
 }
 
 func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
@@ -625,7 +653,7 @@ type CredamoAnswerAction struct {
 	OrderIndices    []int
 }
 
-func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, runtime *questions.RunContext) *CredamoAnswerAction {
+func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, runtime *questions.RunContext) (*CredamoAnswerAction, error) {
 	typeCode := meta.TypeCode
 	optionCount := meta.Options
 	if optionCount <= 0 {
@@ -639,23 +667,41 @@ func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 		configIdx = providerutil.ParseConfigIndex(idx)
 	}
 
+	if meta.Unsupported {
+		return nil, &providerutil.UnsupportedQuestionError{
+			Provider:     ProviderName,
+			QuestionNum:  meta.Num,
+			TypeCode:     typeCode,
+			ProviderType: meta.ProviderType,
+			Reason:       meta.UnsupportedReason,
+		}
+	}
+
 	switch typeCode {
 	case "3": // single
-		return buildChoiceAction(cfg, meta, configIdx, optionCount, runtime)
+		return buildChoiceAction(cfg, meta, configIdx, optionCount, runtime), nil
 	case "4": // multiple
-		return buildMultipleAction(cfg, meta, configIdx, optionCount, runtime)
+		return buildMultipleAction(cfg, meta, configIdx, optionCount, runtime), nil
 	case "5": // scale
-		return buildScaleAction(cfg, meta, configIdx, optionCount, runtime)
+		return buildScaleAction(cfg, meta, configIdx, optionCount, runtime), nil
 	case "6": // matrix
-		return buildMatrixAction(cfg, meta, configIdx, runtime)
+		return buildMatrixAction(cfg, meta, configIdx, runtime), nil
 	case "7": // dropdown
-		return buildChoiceAction(cfg, meta, configIdx, optionCount, runtime)
+		return buildChoiceAction(cfg, meta, configIdx, optionCount, runtime), nil
 	case "11": // order
-		return buildOrderAction(meta, optionCount)
+		return buildOrderAction(meta, optionCount), nil
 	case "1": // text
-		return buildTextAction(cfg, meta, configIdx, runtime)
+		return buildTextAction(cfg, meta, configIdx, runtime), nil
+	case "0":
+		return nil, nil
 	default:
-		return nil
+		return nil, &providerutil.UnsupportedQuestionError{
+			Provider:     ProviderName,
+			QuestionNum:  meta.Num,
+			TypeCode:     typeCode,
+			ProviderType: meta.ProviderType,
+			Reason:       meta.UnsupportedReason,
+		}
 	}
 }
 
@@ -796,12 +842,67 @@ func buildTextAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta
 	if candidate, ok := questions.ChooseConfiguredTextCandidate(cfg, configIdx); ok {
 		text = candidate
 	}
-	text = runtime.GenerateText(meta, configIdx, text, 1)
+	blankCount := meta.TextInputCount
+	if blankCount <= 0 {
+		blankCount = 1
+	}
+	text = runtime.GenerateText(meta, configIdx, text, blankCount)
 	return &CredamoAnswerAction{
 		QuestionID:   meta.ProviderQuestionID,
 		QuestionType: meta.ProviderType,
 		TextValue:    text,
 	}
+}
+
+func validateCredamoActions(actions []CredamoAnswerAction, cfg *models.ExecutionConfig) error {
+	for _, action := range actions {
+		meta, ok := cfg.ProviderQuestionMetadataMap[action.QuestionID]
+		if !ok {
+			continue
+		}
+		optionCount := meta.Options
+		if optionCount <= 0 {
+			optionCount = len(meta.OptionTexts)
+		}
+		switch meta.TypeCode {
+		case "3", "4", "5", "7":
+			if len(action.SelectedIndices) == 0 {
+				return fmt.Errorf("Credamo 第%d题答案为空", meta.Num)
+			}
+			for _, idx := range action.SelectedIndices {
+				if idx < 0 || (optionCount > 0 && idx >= optionCount) {
+					return fmt.Errorf("Credamo 第%d题选项越界: %d", meta.Num, idx)
+				}
+			}
+		case "1":
+			if strings.TrimSpace(action.TextValue) == "" {
+				return fmt.Errorf("Credamo 第%d题填空为空", meta.Num)
+			}
+		case "6":
+			rows := meta.Rows
+			if rows <= 0 {
+				rows = 1
+			}
+			if len(action.MatrixAnswers) != rows {
+				return fmt.Errorf("Credamo 第%d题矩阵行数不完整", meta.Num)
+			}
+			for row, cols := range action.MatrixAnswers {
+				if len(cols) == 0 {
+					return fmt.Errorf("Credamo 第%d题第%d行答案为空", meta.Num, row+1)
+				}
+				for _, idx := range cols {
+					if idx < 0 || (optionCount > 0 && idx >= optionCount) {
+						return fmt.Errorf("Credamo 第%d题第%d行选项越界: %d", meta.Num, row+1, idx)
+					}
+				}
+			}
+		case "11":
+			if optionCount > 0 && len(action.OrderIndices) != optionCount {
+				return fmt.Errorf("Credamo 第%d题排序答案不完整", meta.Num)
+			}
+		}
+	}
+	return nil
 }
 
 func buildSubmitBody(shortURL string, rawQuestions []map[string]any, actions []CredamoAnswerAction, cfg *models.ExecutionConfig, startMS int64, duration int) map[string]any {

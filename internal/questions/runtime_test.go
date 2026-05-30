@@ -1,6 +1,9 @@
 package questions
 
 import (
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strconv"
 	"strings"
@@ -74,6 +77,45 @@ func TestRunContextGeneratesFreeAIText(t *testing.T) {
 	got := runtime.GenerateText(models.SurveyQuestionMeta{Num: 1, Title: "评价"}, 0, "fallback", 1)
 	if got == "fallback" || got == "" {
 		t.Fatalf("AI text = %q, want generated answer", got)
+	}
+}
+
+func TestAIClientRetriesTransientHTTPFailure(t *testing.T) {
+	attempts := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts == 1 {
+			http.Error(w, "busy", http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"补偿答案"}}]}`))
+	}))
+	defer server.Close()
+
+	client := NewAIClient(AIConfig{
+		Mode:    "api",
+		APIKey:  "test-key",
+		BaseURL: server.URL,
+		Model:   "test-model",
+	})
+
+	got, err := client.GenerateAnswer("评价", "1", 1)
+	if err != nil {
+		t.Fatalf("GenerateAnswer returned error: %v", err)
+	}
+	if got != "补偿答案" || attempts != 2 {
+		t.Fatalf("answer=%q attempts=%d, want answer and one retry", got, attempts)
+	}
+}
+
+func TestAIClientClassifiesConfigErrorWithoutRetry(t *testing.T) {
+	client := NewAIClient(AIConfig{Mode: "api"})
+
+	_, err := client.GenerateAnswer("评价", "1", 1)
+	var aiErr *AIError
+	if !errors.As(err, &aiErr) || aiErr.Kind != AIErrorConfig {
+		t.Fatalf("error = %#v, want config AIError", err)
 	}
 }
 
@@ -211,6 +253,23 @@ func TestBuildPsychometricPlanFromConfigUsesBiasAndOrdinalScores(t *testing.T) {
 	}
 	if got := items[0].ScoreByChoice; len(got) != 3 || got[0] != 2 || got[2] != 0 {
 		t.Fatalf("ordinal score map = %#v, want [2 1 0]", got)
+	}
+}
+
+func TestPsychometricOrientationMarksOppositeTargetAsReversed(t *testing.T) {
+	items := []PsychometricItem{
+		{QuestionIndex: 1, OptionCount: 5, Bias: "center", TargetProb: []float64{0.05, 0.05, 0.1, 0.3, 0.5}},
+		{QuestionIndex: 2, OptionCount: 5, Bias: "center", TargetProb: []float64{0.05, 0.05, 0.1, 0.3, 0.5}},
+		{QuestionIndex: 3, OptionCount: 5, Bias: "center", TargetProb: []float64{0.5, 0.3, 0.1, 0.05, 0.05}},
+	}
+
+	orientation := inferDimensionOrientation(items)
+
+	if !orientation.ReversedKeys["q:3"] {
+		t.Fatalf("reversed keys = %#v, want q:3 marked reversed", orientation.ReversedKeys)
+	}
+	if orientation.ReversedKeys["q:1"] || orientation.ReversedKeys["q:2"] {
+		t.Fatalf("reversed keys = %#v, q:1/q:2 should not be reversed", orientation.ReversedKeys)
 	}
 }
 

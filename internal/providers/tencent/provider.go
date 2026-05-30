@@ -93,7 +93,10 @@ func (p *Provider) FillSurveyHTTP(ctx context.Context, cfg *models.ExecutionConf
 	}
 
 	// Build answer actions
-	actions := buildAnswerActions(cfg, state, rawQuestions, opts.ThreadName)
+	actions, err := buildAnswerActions(cfg, state, rawQuestions, opts.ThreadName)
+	if err != nil {
+		return false, err
+	}
 
 	// Build submit body
 	ua := opts.UserAgent
@@ -371,9 +374,25 @@ var qqTypeMap = map[string]string{
 	"star":         "5",
 	"matrix_radio": "6",
 	"matrix_check": "6",
+	"matrix_star":  "6",
 	"select":       "7",
 	"dropdown":     "7",
 	"description":  "0",
+}
+
+var qqSupportedProviderTypes = map[string]bool{
+	"radio":        true,
+	"checkbox":     true,
+	"text":         true,
+	"textarea":     true,
+	"nps":          true,
+	"star":         true,
+	"matrix_radio": true,
+	"matrix_check": true,
+	"matrix_star":  true,
+	"select":       true,
+	"dropdown":     true,
+	"description":  true,
 }
 
 func standardizeQuestions(raw []map[string]any) []models.SurveyQuestionMeta {
@@ -384,7 +403,7 @@ func standardizeQuestions(raw []map[string]any) []models.SurveyQuestionMeta {
 		providerType := getString(q, "type")
 		typeCode := qqTypeMap[providerType]
 		if typeCode == "" {
-			typeCode = "1"
+			typeCode = "0"
 		}
 
 		title := getString(q, "title")
@@ -414,6 +433,14 @@ func standardizeQuestions(raw []map[string]any) []models.SurveyQuestionMeta {
 
 		// Extract multi-select limits
 		minLimit, maxLimit := extractMultiSelectLimits(title, options)
+		if providerType == "checkbox" {
+			if min := intFromAny(q["min_length"]); min > 0 {
+				minLimit = &min
+			}
+			if max := intFromAny(q["max_length"]); max > 0 {
+				maxLimit = &max
+			}
+		}
 
 		// Row texts for matrix
 		rowTexts := extractRowTexts(q)
@@ -433,6 +460,11 @@ func standardizeQuestions(raw []map[string]any) []models.SurveyQuestionMeta {
 			ProviderType:       providerType,
 			ForcedOptionIndex:  forcedIdx,
 			LogicParseStatus:   models.LogicParseStatusNone,
+			FillableOptions:    buildFillableOptionIndices(q, providerType),
+			Unsupported:        !qqSupportedProviderTypes[providerType],
+		}
+		if qm.Unsupported {
+			qm.UnsupportedReason = fmt.Sprintf("暂不支持腾讯题型：%s", providerType)
 		}
 
 		if minLimit != nil {
@@ -464,13 +496,11 @@ func extractOptionTexts(q map[string]any, providerType string) []string {
 		// NPS generates numeric labels
 		beginNum := 0
 		count := 10
-		if opts, ok := q["options"].(map[string]any); ok {
-			if b, ok := opts["star_begin_num"].(float64); ok {
-				beginNum = int(b)
-			}
-			if c, ok := opts["star_num"].(float64); ok {
-				count = int(c)
-			}
+		if b := intFromAny(q["star_begin_num"]); b > 0 {
+			beginNum = b
+		}
+		if c := intFromAny(q["star_num"]); c > 0 {
+			count = c
 		}
 		texts := make([]string, count)
 		for i := range texts {
@@ -479,12 +509,10 @@ func extractOptionTexts(q map[string]any, providerType string) []string {
 		return texts
 	}
 
-	if providerType == "star" {
+	if providerType == "star" || providerType == "matrix_star" {
 		count := 5
-		if opts, ok := q["options"].(map[string]any); ok {
-			if c, ok := opts["star_num"].(float64); ok {
-				count = int(c)
-			}
+		if c := intFromAny(q["star_num"]); c > 0 {
+			count = c
 		}
 		texts := make([]string, count)
 		for i := range texts {
@@ -506,6 +534,46 @@ func extractOptionTexts(q map[string]any, providerType string) []string {
 		return texts
 	}
 	return nil
+}
+
+func buildFillableOptionIndices(q map[string]any, providerType string) []int {
+	if providerType != "radio" && providerType != "checkbox" && providerType != "select" {
+		return nil
+	}
+	optsRaw, ok := q["options"].([]any)
+	if !ok {
+		return nil
+	}
+	var fillable []int
+	for idx, item := range optsRaw {
+		if payloadContainsFillblank(item, 0) {
+			fillable = append(fillable, idx)
+		}
+	}
+	return fillable
+}
+
+func payloadContainsFillblank(value any, depth int) bool {
+	if depth > 4 || value == nil {
+		return false
+	}
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, item := range typed {
+			if strings.Contains(strings.ToLower(key), "fillblank") || payloadContainsFillblank(item, depth+1) {
+				return true
+			}
+		}
+	case []any:
+		for _, item := range typed {
+			if payloadContainsFillblank(item, depth+1) {
+				return true
+			}
+		}
+	case string:
+		return strings.Contains(strings.ToLower(typed), "fillblank")
+	}
+	return false
 }
 
 func extractRowTexts(q map[string]any) []string {
@@ -995,7 +1063,7 @@ func extractMultiSelectLimits(title string, optionCount int) (*int, *int) {
 	return minLimit, maxLimit
 }
 
-func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionState, rawQuestions []map[string]any, threadName string) []TencentAnswerAction {
+func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionState, rawQuestions []map[string]any, threadName string) ([]TencentAnswerAction, error) {
 	runtime := questions.NewRunContextForThread(cfg, state, threadName)
 	// Build a map from question ID to raw question for option ID lookup
 	rawByQID := make(map[string]map[string]any)
@@ -1024,7 +1092,10 @@ func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionStat
 			continue
 		}
 		rawQ := rawByQID[meta.ProviderQuestionID]
-		action := buildSingleAction(cfg, meta, rawQ, runtime)
+		action, err := buildSingleAction(cfg, meta, rawQ, runtime)
+		if err != nil {
+			return nil, err
+		}
 		if action != nil {
 			actionByNum[meta.Num] = *action
 			actions = append(actions, *action)
@@ -1036,7 +1107,10 @@ func buildAnswerActions(cfg *models.ExecutionConfig, state *models.ExecutionStat
 			}
 		}
 	}
-	return actions
+	if err := validateTencentActions(actions, cfg); err != nil {
+		return nil, err
+	}
+	return actions, nil
 }
 
 func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
@@ -1061,7 +1135,7 @@ func sortedQuestions(cfg *models.ExecutionConfig) []models.SurveyQuestionMeta {
 	return questions
 }
 
-func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, rawQ map[string]any, runtime *questions.RunContext) *TencentAnswerAction {
+func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta, rawQ map[string]any, runtime *questions.RunContext) (*TencentAnswerAction, error) {
 	typeCode := meta.TypeCode
 	optionCount := meta.Options
 	if optionCount <= 0 {
@@ -1075,21 +1149,39 @@ func buildSingleAction(cfg *models.ExecutionConfig, meta models.SurveyQuestionMe
 		configIdx = providerutil.ParseConfigIndex(idx)
 	}
 
+	if meta.Unsupported {
+		return nil, &providerutil.UnsupportedQuestionError{
+			Provider:     ProviderName,
+			QuestionNum:  meta.Num,
+			TypeCode:     typeCode,
+			ProviderType: meta.ProviderType,
+			Reason:       meta.UnsupportedReason,
+		}
+	}
+
 	switch typeCode {
 	case "3": // single
-		return buildChoiceAnswer(cfg, meta, configIdx, optionCount, false, rawQ, runtime)
+		return buildChoiceAnswer(cfg, meta, configIdx, optionCount, false, rawQ, runtime), nil
 	case "4": // multiple
-		return buildMultipleAnswer(cfg, meta, configIdx, optionCount, rawQ, runtime)
+		return buildMultipleAnswer(cfg, meta, configIdx, optionCount, rawQ, runtime), nil
 	case "5": // scale/nps
-		return buildScaleAnswer(cfg, meta, configIdx, optionCount, rawQ, runtime)
+		return buildScaleAnswer(cfg, meta, configIdx, optionCount, rawQ, runtime), nil
 	case "6": // matrix
-		return buildMatrixAnswer(cfg, meta, configIdx, rawQ, runtime)
+		return buildMatrixAnswer(cfg, meta, configIdx, rawQ, runtime), nil
 	case "7": // dropdown
-		return buildChoiceAnswer(cfg, meta, configIdx, optionCount, true, rawQ, runtime)
+		return buildChoiceAnswer(cfg, meta, configIdx, optionCount, true, rawQ, runtime), nil
 	case "1": // text
-		return buildTextAnswer(cfg, meta, configIdx, runtime)
+		return buildTextAnswer(cfg, meta, configIdx, runtime), nil
+	case "0":
+		return nil, nil
 	default:
-		return nil
+		return nil, &providerutil.UnsupportedQuestionError{
+			Provider:     ProviderName,
+			QuestionNum:  meta.Num,
+			TypeCode:     typeCode,
+			ProviderType: meta.ProviderType,
+			Reason:       meta.UnsupportedReason,
+		}
 	}
 }
 
@@ -1403,12 +1495,58 @@ func buildTextAnswer(cfg *models.ExecutionConfig, meta models.SurveyQuestionMeta
 	if candidate, ok := questions.ChooseConfiguredTextCandidate(cfg, configIdx); ok {
 		text = candidate
 	}
-	text = runtime.GenerateText(meta, configIdx, text, 1)
+	blankCount := meta.TextInputCount
+	if blankCount <= 0 {
+		blankCount = 1
+	}
+	text = runtime.GenerateText(meta, configIdx, text, blankCount)
 	return &TencentAnswerAction{
 		QuestionID:   meta.ProviderQuestionID,
 		QuestionType: meta.ProviderType,
 		TextValue:    text,
 	}
+}
+
+func validateTencentActions(actions []TencentAnswerAction, cfg *models.ExecutionConfig) error {
+	for _, action := range actions {
+		meta, ok := cfg.ProviderQuestionMetadataMap[action.QuestionID]
+		if !ok {
+			continue
+		}
+		optionCount := meta.Options
+		if optionCount <= 0 {
+			optionCount = len(meta.OptionTexts)
+		}
+		switch meta.TypeCode {
+		case "3", "4", "5", "7":
+			if len(action.SelectedIndices) == 0 || len(action.SelectedIDs) == 0 {
+				return fmt.Errorf("腾讯问卷第%d题答案为空", meta.Num)
+			}
+			for _, idx := range action.SelectedIndices {
+				if idx < 0 || (optionCount > 0 && idx >= optionCount) {
+					return fmt.Errorf("腾讯问卷第%d题选项越界: %d", meta.Num, idx)
+				}
+			}
+		case "1":
+			if strings.TrimSpace(action.TextValue) == "" {
+				return fmt.Errorf("腾讯问卷第%d题填空为空", meta.Num)
+			}
+		case "6":
+			rows := meta.Rows
+			if rows <= 0 {
+				rows = 1
+			}
+			if len(action.MatrixIndices) != rows || len(action.MatrixAnswers) != rows {
+				return fmt.Errorf("腾讯问卷第%d题矩阵行数不完整", meta.Num)
+			}
+			for row, idx := range action.MatrixIndices {
+				if idx < 0 || (optionCount > 0 && idx >= optionCount) {
+					return fmt.Errorf("腾讯问卷第%d题第%d行选项越界: %d", meta.Num, row+1, idx)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func buildSubmitBody(surveyID, hashValue string, rawQuestions []map[string]any, actions []TencentAnswerAction, duration int, ua string) map[string]any {

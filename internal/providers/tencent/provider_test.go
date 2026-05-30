@@ -1,6 +1,7 @@
 package tencent
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -190,7 +191,10 @@ func TestBuildAnswerActionsAppliesTencentDisplayConditions(t *testing.T) {
 		{"id": "q-3", "type": "text", "page_id": "p-1"},
 	}
 
-	actions := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	actions, err := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	if err != nil {
+		t.Fatalf("buildAnswerActions returned error: %v", err)
+	}
 	if len(actions) != 2 {
 		t.Fatalf("actions length = %d, want 2: %#v", len(actions), actions)
 	}
@@ -228,11 +232,38 @@ func TestBuildAnswerActionsAppliesTencentForwardJumpRules(t *testing.T) {
 		{"id": "q-3", "type": "text", "page_id": "p-1"},
 	}
 
-	actions := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	actions, err := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	if err != nil {
+		t.Fatalf("buildAnswerActions returned error: %v", err)
+	}
 	if len(actions) != 2 {
 		t.Fatalf("actions length = %d, want 2: %#v", len(actions), actions)
 	}
 	if actions[0].QuestionID != "q-1" || actions[1].QuestionID != "q-3" {
 		t.Fatalf("actions = %#v, want q-1 and q-3", actions)
+	}
+}
+
+func TestBuildAnswerActionsRejectsUnsupportedTencentQuestion(t *testing.T) {
+	cfg := &models.ExecutionConfig{
+		QuestionsMetadata: map[int]models.SurveyQuestionMeta{
+			1: {
+				Num:                1,
+				TypeCode:           "0",
+				ProviderQuestionID: "q-upload",
+				ProviderType:       "upload",
+				Unsupported:        true,
+				UnsupportedReason:  "暂不支持腾讯题型：upload",
+			},
+		},
+	}
+	rawQuestions := []map[string]any{
+		{"id": "q-upload", "type": "upload", "page_id": "p-1"},
+	}
+
+	_, err := buildAnswerActions(cfg, models.NewExecutionState(), rawQuestions, "")
+	var unsupported *providerutil.UnsupportedQuestionError
+	if !errors.As(err, &unsupported) {
+		t.Fatalf("error = %#v, want UnsupportedQuestionError", err)
 	}
 }

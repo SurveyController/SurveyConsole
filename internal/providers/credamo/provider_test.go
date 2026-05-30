@@ -1,6 +1,7 @@
 package credamo
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -175,6 +176,27 @@ func TestSampleAnswerDurationSecondsAllowsFixedConfiguredRange(t *testing.T) {
 	cfg := &models.ExecutionConfig{AnswerDurationRangeSeconds: [2]int{30, 30}}
 	if got := providerutil.SampleAnswerDurationSeconds(cfg, 9, 16); got != 30 {
 		t.Fatalf("sampleAnswerDurationSeconds fixed range = %d, want 30", got)
+	}
+}
+
+func TestBuildAnswerActionsRejectsUnsupportedCredamoQuestion(t *testing.T) {
+	cfg := &models.ExecutionConfig{
+		QuestionsMetadata: map[int]models.SurveyQuestionMeta{
+			1: {
+				Num:                1,
+				TypeCode:           "0",
+				ProviderQuestionID: "101",
+				ProviderType:       "upload",
+				Unsupported:        true,
+				UnsupportedReason:  "暂不支持 Credamo 题型：upload",
+			},
+		},
+	}
+
+	_, err := buildAnswerActions(cfg, models.NewExecutionState(), "")
+	var unsupported *providerutil.UnsupportedQuestionError
+	if !errors.As(err, &unsupported) {
+		t.Fatalf("error = %#v, want UnsupportedQuestionError", err)
 	}
 }
 
