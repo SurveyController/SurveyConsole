@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/providers"
+	"github.com/SurveyController/SurveyCore/internal/providers"
 	"github.com/makiuchi-d/gozxing"
 	"github.com/makiuchi-d/gozxing/qrcode"
 )

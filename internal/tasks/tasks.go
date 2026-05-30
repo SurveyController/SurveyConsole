@@ -10,14 +10,14 @@ import (
 	"sync"
 	"time"
 
-	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+	runstate "github.com/SurveyController/SurveyCore/internal/runtime"
 
-	"github.com/SurveyController/SurveyConsole/internal/config"
-	"github.com/SurveyController/SurveyConsole/internal/engine"
-	"github.com/SurveyController/SurveyConsole/internal/logging"
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/network/proxy"
-	"github.com/SurveyController/SurveyConsole/internal/providers"
+	"github.com/SurveyController/SurveyCore/internal/config"
+	"github.com/SurveyController/SurveyCore/internal/engine"
+	"github.com/SurveyController/SurveyCore/internal/logging"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/network/proxy"
+	"github.com/SurveyController/SurveyCore/internal/providers"
 )
 
 type TaskManager struct {

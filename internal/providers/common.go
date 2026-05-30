@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/domain"
+	"github.com/SurveyController/SurveyCore/internal/domain"
 )
 
 // Provider constants

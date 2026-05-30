@@ -8,15 +8,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/api"
-	"github.com/SurveyController/SurveyConsole/internal/logging"
-	"github.com/SurveyController/SurveyConsole/internal/tasks"
+	"github.com/SurveyController/SurveyCore/internal/api"
+	"github.com/SurveyController/SurveyCore/internal/logging"
+	"github.com/SurveyController/SurveyCore/internal/tasks"
 )
 
 var version = "0.1.0"
 
 func main() {
-	addr := os.Getenv("SURVEYCONSOLE_ADDR")
+	addr := os.Getenv("SURVEYCORE_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:19178"
 	}

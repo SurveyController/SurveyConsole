@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 // ParseConfigIndex parses a string config index, returning 0 on malformed input.

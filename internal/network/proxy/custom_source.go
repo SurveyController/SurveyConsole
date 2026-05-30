@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 func fetchFromCustom(apiURL string, count int) ([]models.ProxyLease, error) {

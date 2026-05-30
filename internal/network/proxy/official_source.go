@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 func fetchFromOfficial(source string, count int, opts officialOptions) ([]models.ProxyLease, error) {

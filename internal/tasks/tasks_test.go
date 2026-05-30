@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+	runstate "github.com/SurveyController/SurveyCore/internal/runtime"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 func TestNewProxyPoolFromRuntimeConfigUsesOfficialRandomIPConfig(t *testing.T) {

@@ -3,7 +3,7 @@ package models
 import (
 	"context"
 
-	"github.com/SurveyController/SurveyConsole/internal/domain"
+	"github.com/SurveyController/SurveyCore/internal/domain"
 )
 
 type FillOptions = domain.FillOptions

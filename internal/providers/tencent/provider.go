@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
-	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+	"github.com/SurveyController/SurveyCore/internal/execution"
+	runstate "github.com/SurveyController/SurveyCore/internal/runtime"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
-	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/network/httpclient"
+	"github.com/SurveyController/SurveyCore/internal/providers/providerutil"
 )
 
 const (

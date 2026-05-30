@@ -3,7 +3,7 @@ package config
 import (
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 const defaultFillText = "无"

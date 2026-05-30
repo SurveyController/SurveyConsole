@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/reversefill"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/reversefill"
 )
 
 const dimensionUngrouped = "未分组"

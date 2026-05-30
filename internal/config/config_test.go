@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 func TestBuildExecutionConfigKeepsQuestionEntryIndices(t *testing.T) {

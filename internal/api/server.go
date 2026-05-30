@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	surveyio "github.com/SurveyController/SurveyConsole/internal/io"
-	"github.com/SurveyController/SurveyConsole/internal/logging"
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/tasks"
+	surveyio "github.com/SurveyController/SurveyCore/internal/io"
+	"github.com/SurveyController/SurveyCore/internal/logging"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/tasks"
 )
 
 type TaskService interface {
@@ -152,7 +152,7 @@ func (s *Server) handleDecodeQR(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	tmp, err := os.CreateTemp("", "surveyconsole-qr-*"+filepath.Ext(header.Filename))
+	tmp, err := os.CreateTemp("", "surveycore-qr-*"+filepath.Ext(header.Filename))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

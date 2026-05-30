@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/network/httpclient"
 )
 
 func extractQQIdentifiers(surveyURL string) (string, string, error) {

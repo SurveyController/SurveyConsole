@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 
-	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
+	"github.com/SurveyController/SurveyCore/internal/network/httpclient"
 )
 
 func saveAnswers(ctx context.Context, shortURL, answerToken, timeCode string, body map[string]any, ua, cookieHeader string, proxyAddr *string) (bool, error) {

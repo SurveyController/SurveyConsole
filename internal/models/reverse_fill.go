@@ -1,6 +1,6 @@
 package models
 
-import "github.com/SurveyController/SurveyConsole/internal/domain"
+import "github.com/SurveyController/SurveyCore/internal/domain"
 
 const (
 	ReverseFillFormatAuto        = domain.ReverseFillFormatAuto

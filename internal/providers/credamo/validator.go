@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 )
 
 func validateCredamoActions(actions []CredamoAnswerAction, cfg *execution.ExecutionConfig) error {

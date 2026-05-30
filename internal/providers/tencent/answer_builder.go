@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
-	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+	"github.com/SurveyController/SurveyCore/internal/execution"
+	runstate "github.com/SurveyController/SurveyCore/internal/runtime"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/providers/providerutil"
-	"github.com/SurveyController/SurveyConsole/internal/questions"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/providers/providerutil"
+	"github.com/SurveyController/SurveyCore/internal/questions"
 )
 
 func buildAnswerActions(cfg *execution.ExecutionConfig, state *runstate.ExecutionState, rawQuestions []map[string]any, threadName string) ([]TencentAnswerAction, error) {

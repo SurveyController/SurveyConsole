@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 const answerDatetimeWindowLayout = "2006-01-02 15:04:05"

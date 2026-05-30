@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+	runstate "github.com/SurveyController/SurveyCore/internal/runtime"
 
-	"github.com/SurveyController/SurveyConsole/internal/config"
-	"github.com/SurveyController/SurveyConsole/internal/engine"
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/providers"
+	"github.com/SurveyController/SurveyCore/internal/config"
+	"github.com/SurveyController/SurveyCore/internal/engine"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/providers"
 )
 
 const liveURLEnv = "SURVEY_CONTROLLER_LIVE_TEST_URL"

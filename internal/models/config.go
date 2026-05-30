@@ -3,7 +3,7 @@ package models
 import (
 	"encoding/json"
 
-	"github.com/SurveyController/SurveyConsole/internal/domain"
+	"github.com/SurveyController/SurveyCore/internal/domain"
 )
 
 // Default UA keys for random user agent

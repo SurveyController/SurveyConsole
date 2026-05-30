@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
-	"github.com/SurveyController/SurveyConsole/internal/tasks"
+	"github.com/SurveyController/SurveyCore/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/tasks"
 )
 
 func TestHealth(t *testing.T) {

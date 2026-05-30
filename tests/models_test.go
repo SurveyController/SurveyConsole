@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
-	runstate "github.com/SurveyController/SurveyConsole/internal/runtime"
+	"github.com/SurveyController/SurveyCore/internal/execution"
+	runstate "github.com/SurveyController/SurveyCore/internal/runtime"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 func TestRuntimeConfigSerialization(t *testing.T) {

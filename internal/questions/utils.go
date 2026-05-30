@@ -4,7 +4,7 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 )
 
 // WeightedIndex selects an index based on probability weights.

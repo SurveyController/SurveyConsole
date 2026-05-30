@@ -3,9 +3,9 @@ package providerutil
 import (
 	"testing"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 func TestFloat64SliceAcceptsTypedAndJSONSlices(t *testing.T) {

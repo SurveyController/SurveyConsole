@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/models"
+	"github.com/SurveyController/SurveyCore/internal/models"
 )
 
 var ipPortRe = regexp.MustCompile(`(?:https?://)?(?:([^\s:@/,\[\]"]+):([^\s:@/,\[\]"]+)@)?((?:\d{1,3}\.){3}\d{1,3}):(\d{2,5})`)

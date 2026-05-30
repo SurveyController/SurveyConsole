@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/domain"
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/domain"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 )
 
 // ThreadProgressState tracks per-worker-thread progress.

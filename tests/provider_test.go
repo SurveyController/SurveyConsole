@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/SurveyController/SurveyConsole/internal/providers"
+	"github.com/SurveyController/SurveyCore/internal/providers"
 )
 
 func TestDetectSurveyProvider(t *testing.T) {

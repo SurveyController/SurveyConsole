@@ -1,7 +1,7 @@
 package execution
 
 import (
-	"github.com/SurveyController/SurveyConsole/internal/domain"
+	"github.com/SurveyController/SurveyCore/internal/domain"
 )
 
 // ExecutionConfig is the static, thread-safe snapshot used at runtime.

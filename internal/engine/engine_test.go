@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 )
 
 func TestSampleIntervalDelayUsesRange(t *testing.T) {

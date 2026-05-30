@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 )
 
 func validateTencentActions(actions []TencentAnswerAction, cfg *execution.ExecutionConfig) error {

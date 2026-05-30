@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SurveyController/SurveyConsole/internal/execution"
+	"github.com/SurveyController/SurveyCore/internal/execution"
 
-	"github.com/SurveyController/SurveyConsole/internal/network/httpclient"
+	"github.com/SurveyController/SurveyCore/internal/network/httpclient"
 )
 
 func sampleAnswerStartTimeMS(cfg *execution.ExecutionConfig, initStartedAtMS int64, durationSeconds int) int64 {
